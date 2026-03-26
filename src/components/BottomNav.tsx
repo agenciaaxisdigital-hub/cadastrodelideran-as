@@ -1,8 +1,8 @@
-import { PlusCircle, List, UserCircle, BarChart3, Shield, Users } from 'lucide-react';
+import { PlusCircle, List, UserCircle, BarChart3, Shield, Users, Network } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export type TabId = 'cadastrar' | 'liderancas' | 'fiscais' | 'eleitores' | 'perfil';
+export type TabId = 'cadastrar' | 'liderancas' | 'fiscais' | 'eleitores' | 'rede' | 'perfil';
 
 interface Props {
   active: TabId;
@@ -32,6 +32,11 @@ export default function BottomNav({ active, onChange }: Props) {
   // Everyone except super_admin sees eleitores tab (fiscais register voters)
   if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca' || tipoUsuario === 'fiscal') {
     tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
+  }
+
+  // Admin sees full network view by suplente
+  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador') {
+    tabs.push({ id: 'rede', icon: Network, label: 'Rede' });
   }
 
   tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });

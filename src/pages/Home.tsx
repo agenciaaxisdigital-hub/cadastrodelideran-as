@@ -5,6 +5,7 @@ import TabCadastrar from '@/components/TabCadastrar';
 import TabLiderancas from '@/components/TabLiderancas';
 import TabFiscais from '@/components/TabFiscais';
 import TabEleitores from '@/components/TabEleitores';
+import TabRede from '@/components/TabRede';
 import TabPerfil from '@/components/TabPerfil';
 
 const tabTitles: Record<TabId, string> = {
@@ -12,6 +13,7 @@ const tabTitles: Record<TabId, string> = {
   liderancas: 'Lideranças',
   fiscais: 'Fiscais',
   eleitores: 'Possíveis Eleitores',
+  rede: 'Rede por Suplente',
   perfil: 'Perfil',
 };
 
@@ -37,6 +39,7 @@ export default function Home() {
     if (activeTab === 'liderancas') return isAdmin ? 'Todas as Lideranças' : 'Minhas Lideranças';
     if (activeTab === 'fiscais') return isAdmin ? 'Todos os Fiscais' : 'Meus Fiscais';
     if (activeTab === 'eleitores') return isAdmin ? 'Todos os Eleitores' : 'Meus Eleitores';
+    if (activeTab === 'rede') return 'Rede por Suplente';
     if (activeTab === 'cadastrar') {
       if (tipoUsuario === 'fiscal') return 'Cadastrar Eleitor';
       if (tipoUsuario === 'lideranca') return 'Cadastrar Fiscal';
@@ -62,6 +65,7 @@ export default function Home() {
           {activeTab === 'liderancas' && <TabLiderancas refreshKey={refreshKey} />}
           {activeTab === 'fiscais' && <TabFiscais refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'eleitores' && <TabEleitores refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
+          {activeTab === 'rede' && <TabRede />}
           {activeTab === 'perfil' && <TabPerfil />}
         </div>
       </div>
