@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   try {
     const externalUrl = Deno.env.get('EXTERNAL_SUPABASE_URL');
-    const externalKey = Deno.env.get('EXTERNAL_SUPABASE_ANON_KEY');
+    const externalKey = Deno.env.get('EXTERNAL_SUPABASE_SERVICE_KEY') || Deno.env.get('EXTERNAL_SUPABASE_ANON_KEY');
 
     if (!externalUrl || !externalKey) {
       return new Response(
