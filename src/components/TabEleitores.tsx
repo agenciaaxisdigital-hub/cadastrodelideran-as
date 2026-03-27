@@ -166,7 +166,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
       });
       if (error) throw error;
 
-      toast({ title: '✅ Possível eleitor cadastrado!' });
+      toast({ title: '✅ Eleitor cadastrado!' });
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
       setCpfStatus('idle');
@@ -233,7 +233,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-bold text-foreground">{p.nome}</h2>
-              <p className="text-sm text-muted-foreground">Possível eleitor</p>
+              <p className="text-sm text-muted-foreground">Eleitor</p>
             </div>
             {compromissoBadge(e.compromisso_voto)}
           </div>
@@ -430,7 +430,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
   return (
     <div className="space-y-3 pb-24">
       <button onClick={() => setMode('form')} className="w-full h-12 gradient-primary text-white font-semibold rounded-xl active:scale-[0.97] transition-all">
-        + Cadastrar Possível Eleitor
+        + Cadastrar Eleitor
       </button>
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
