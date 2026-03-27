@@ -59,7 +59,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ background: "#070510" }}>
+    <div className="h-full flex flex-col items-center justify-center p-4 relative overflow-y-auto overscroll-contain" style={{ background: "#070510" }}>
       <Suspense fallback={null}>
         <div className="fixed inset-0 z-0">
           <Hyperspeed effectOptions={preset} />
