@@ -10,34 +10,43 @@ interface Props {
 }
 
 export default function BottomNav({ active, onChange }: Props) {
-  const { isAdmin, tipoUsuario } = useAuth();
+  const { isAdmin, tipoUsuario, usuario } = useAuth();
   const navigate = useNavigate();
+
+  // "Agente de campo" = lideranca sem suplente_id (usuário livre)
+  const isAgenteCampo = tipoUsuario === 'lideranca' && !usuario?.suplente_id;
 
   // Build tabs dynamically based on user type
   const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [];
 
-  // Everyone can register lideranças/fiscais/eleitores
-  tabs.push({ id: 'liderancas', icon: PlusCircle, label: 'Lideranças' });
-
-  // Suplentes, lideranças, coordenadores and admins see fiscais
-  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca') {
-    tabs.push({ id: 'fiscais', icon: Shield, label: 'Fiscais' });
-  }
-
-  // Everyone sees eleitores tab
-  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca' || tipoUsuario === 'fiscal') {
+  if (isAgenteCampo) {
+    // Agentes de campo só veem Eleitores + Perfil
     tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
+    tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });
+  } else {
+    // Everyone can register lideranças/fiscais/eleitores
+    tabs.push({ id: 'liderancas', icon: PlusCircle, label: 'Lideranças' });
+
+    // Suplentes, lideranças, coordenadores and admins see fiscais
+    if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca') {
+      tabs.push({ id: 'fiscais', icon: Shield, label: 'Fiscais' });
+    }
+
+    // Everyone sees eleitores tab
+    if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca' || tipoUsuario === 'fiscal') {
+      tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
+    }
+
+    // Cadastros: unified view of all registrations
+    tabs.push({ id: 'cadastros', icon: List, label: 'Cadastros' });
+
+    // Admin sees full network view by suplente
+    if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador') {
+      tabs.push({ id: 'rede', icon: Network, label: 'Rede' });
+    }
+
+    tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });
   }
-
-  // Cadastros: unified view of all registrations
-  tabs.push({ id: 'cadastros', icon: List, label: 'Cadastros' });
-
-  // Admin sees full network view by suplente
-  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador') {
-    tabs.push({ id: 'rede', icon: Network, label: 'Rede' });
-  }
-
-  tabs.push({ id: 'perfil', icon: UserCircle, label: 'Perfil' });
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-bottom">
