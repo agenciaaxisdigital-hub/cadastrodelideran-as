@@ -58,7 +58,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
     setLoading(true);
     const { data: eleitores } = await supabase
       .from('possiveis_eleitores')
-      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, zona_eleitoral, secao_eleitoral)')
+      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, zona_eleitoral, secao_eleitoral), liderancas:lideranca_id(id, pessoas(nome)), fiscais:fiscal_id(id, pessoas(nome))')
       .order('criado_em', { ascending: false });
     if (eleitores) setData(eleitores as unknown as EleitorRow[]);
     setLoading(false);
