@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  ArrowLeft, Users, TrendingUp, Award, Activity, ChevronDown, ChevronUp,
-  Zap, Target, Shield, Calendar, Clock, Filter, UserCheck
+  ArrowLeft, Users, TrendingUp, Shield, Target, Filter,
+  ChevronDown, ChevronUp, UserCheck, Loader2
 } from 'lucide-react';
 import {
-  PieChart, Pie, Cell, ResponsiveContainer,
-  CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar
+  ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar
 } from 'recharts';
 
 /* ── types ── */
@@ -16,6 +15,7 @@ interface Cadastro {
   id: string;
   criado_em: string;
   cadastrado_por: string | null;
+  suplente_id: string | null;
   tipo: 'lideranca' | 'fiscal' | 'eleitor';
 }
 
@@ -23,7 +23,6 @@ interface HierarquiaUsuario {
   id: string;
   nome: string;
   tipo: string;
-  criado_em: string;
   suplente_id: string | null;
 }
 
@@ -35,35 +34,14 @@ interface Suplente {
 }
 
 /* ── helpers ── */
-const STATUS_COLORS: Record<string, string> = {
-  Ativa: 'hsl(142 71% 45%)',
-  Potencial: 'hsl(217 91% 60%)',
-  'Em negociação': 'hsl(45 93% 47%)',
-  Fraca: 'hsl(25 95% 53%)',
-  Descartada: 'hsl(0 72% 51%)',
-};
-
 const TIPO_COLORS: Record<string, string> = {
   lideranca: 'hsl(217 91% 60%)',
   fiscal: 'hsl(142 71% 45%)',
   eleitor: 'hsl(280 70% 55%)',
 };
 
-function timeSince(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'agora';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}min atrás`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h atrás`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d atrás`;
-  return date.toLocaleDateString('pt-BR');
-}
-
 type Periodo = 'hoje' | 'semana' | 'mes' | 'total';
 type TipoFiltro = 'todos' | 'lideranca' | 'fiscal' | 'eleitor';
-type VisualizacaoRanking = 'agentes' | 'suplentes';
 
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
@@ -71,11 +49,9 @@ export default function AdminDashboard() {
   const [cadastros, setCadastros] = useState<Cadastro[]>([]);
   const [usuarios, setUsuarios] = useState<HierarquiaUsuario[]>([]);
   const [suplentes, setSuplentes] = useState<Suplente[]>([]);
-  const [statusData, setStatusData] = useState<{ name: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<Periodo>('total');
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('todos');
-  const [visRanking, setVisRanking] = useState<VisualizacaoRanking>('suplentes');
   const [expandedSuplente, setExpandedSuplente] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,12 +60,11 @@ export default function AdminDashboard() {
   }, [isAdmin]);
 
   const fetchData = async () => {
-    const [lRes, fRes, eRes, uRes, statusRes, supRes] = await Promise.all([
-      supabase.from('liderancas').select('id, criado_em, cadastrado_por'),
-      supabase.from('fiscais').select('id, criado_em, cadastrado_por'),
-      supabase.from('possiveis_eleitores').select('id, criado_em, cadastrado_por'),
-      supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em, suplente_id').eq('ativo', true),
-      supabase.from('liderancas').select('status'),
+    const [lRes, fRes, eRes, uRes, supRes] = await Promise.all([
+      supabase.from('liderancas').select('id, criado_em, cadastrado_por, suplente_id'),
+      supabase.from('fiscais').select('id, criado_em, cadastrado_por, suplente_id'),
+      supabase.from('possiveis_eleitores').select('id, criado_em, cadastrado_por, suplente_id'),
+      supabase.from('hierarquia_usuarios').select('id, nome, tipo, suplente_id').eq('ativo', true),
       supabase.functions.invoke('buscar-suplentes'),
     ]);
 
@@ -99,49 +74,9 @@ export default function AdminDashboard() {
       ...(eRes.data || []).map(r => ({ ...r, tipo: 'eleitor' as const })),
     ];
 
-    // ── MOCK DATA (remover depois) ──
-    const mockSuplenteIds = ['sup-1', 'sup-2', 'sup-3'];
-    const mockSuplenteNames = ['ERNANDES XAVIER', 'ALARCON', 'CELINA DO POSTINHO'];
-    const mockSuplentes: Suplente[] = mockSuplenteIds.map((id, i) => ({
-      id, nome: mockSuplenteNames[i], regiao_atuacao: ['Buriti Sereno', 'Rosa dos Ventos', 'Jardim Bela Vista'][i], partido: ['PDT', 'PDT', 'PDT'][i],
-    }));
-
-    const mockAgentIds = ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5', 'agent-6', 'agent-7', 'agent-8'];
-    const mockAgentNames = ['Carlos Silva', 'Maria Souza', 'João Pereira', 'Ana Costa', 'Pedro Santos', 'Lucas Oliveira', 'Fernanda Lima', 'Roberto Dias'];
-    const mockAgents: HierarquiaUsuario[] = mockAgentIds.map((id, i) => ({
-      id,
-      nome: mockAgentNames[i],
-      tipo: i < 3 ? 'suplente' : i < 6 ? 'lideranca' : 'fiscal',
-      criado_em: new Date(2026, 2, 1).toISOString(),
-      suplente_id: mockSuplenteIds[i % 3],
-    }));
-
-    const mockCadastros: Cadastro[] = [];
-    const tipos: Array<'lideranca' | 'fiscal' | 'eleitor'> = ['lideranca', 'fiscal', 'eleitor'];
-    for (let d = 0; d < 25; d++) {
-      const count = Math.floor(Math.random() * 8) + 2;
-      for (let j = 0; j < count; j++) {
-        const date = new Date(2026, 2, 3 + d, Math.floor(Math.random() * 12) + 8);
-        mockCadastros.push({
-          id: `mock-${d}-${j}`,
-          criado_em: date.toISOString(),
-          cadastrado_por: mockAgentIds[Math.floor(Math.random() * mockAgentIds.length)],
-          tipo: tipos[Math.floor(Math.random() * 3)],
-        });
-      }
-    }
-
-    setCadastros([...allCadastros, ...mockCadastros]);
-    setUsuarios([...(uRes.data || []), ...mockAgents]);
-    setSuplentes([...(supRes.data || []), ...mockSuplentes]);
-
-    const mockStatusData = [
-      { name: 'Ativa', value: 42 }, { name: 'Potencial', value: 18 },
-      { name: 'Em negociação', value: 12 }, { name: 'Fraca', value: 7 }, { name: 'Descartada', value: 3 },
-    ];
-    setStatusData(mockStatusData);
-    // ── FIM MOCK DATA ──
-
+    setCadastros(allCadastros);
+    setUsuarios(uRes.data || []);
+    setSuplentes(supRes.data || []);
     setLoading(false);
   };
 
@@ -166,69 +101,34 @@ export default function AdminDashboard() {
   }, [cadastros, tipoFiltro, periodo, hoje, inicioSemana, inicioMes]);
 
   const totais = useMemo(() => {
-    const dateLimit = getDateFilter(periodo);
-    const filtered = dateLimit ? cadastros.filter(c => new Date(c.criado_em) >= dateLimit) : cadastros;
     return {
-      liderancas: filtered.filter(c => c.tipo === 'lideranca').length,
-      fiscais: filtered.filter(c => c.tipo === 'fiscal').length,
-      eleitores: filtered.filter(c => c.tipo === 'eleitor').length,
-      total: filtered.length,
+      liderancas: filteredCadastros.filter(c => c.tipo === 'lideranca').length,
+      fiscais: filteredCadastros.filter(c => c.tipo === 'fiscal').length,
+      eleitores: filteredCadastros.filter(c => c.tipo === 'eleitor').length,
+      total: filteredCadastros.length,
     };
-  }, [cadastros, periodo, hoje, inicioSemana, inicioMes]);
+  }, [filteredCadastros]);
 
-  const agentes = useMemo(() =>
-    usuarios.filter(u => u.tipo === 'suplente' || u.tipo === 'lideranca' || u.tipo === 'coordenador' || u.tipo === 'fiscal'),
-    [usuarios]
-  );
-
-  /* ── map agent -> suplente ── */
+  /* ── agent -> suplente map ── */
   const agentToSuplente = useMemo(() => {
     const map: Record<string, string> = {};
-    usuarios.forEach(u => {
-      if (u.suplente_id) map[u.id] = u.suplente_id;
-    });
+    usuarios.forEach(u => { if (u.suplente_id) map[u.id] = u.suplente_id; });
     return map;
   }, [usuarios]);
 
-  /* ── ranking por agente ── */
-  const rankingAgentes = useMemo(() => {
-    const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number; ultimo: Date | null }> = {};
-
-    filteredCadastros.forEach(c => {
-      if (!c.cadastrado_por) return;
-      if (!map[c.cadastrado_por]) map[c.cadastrado_por] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, ultimo: null };
-      map[c.cadastrado_por].total++;
-      if (c.tipo === 'lideranca') map[c.cadastrado_por].liderancas++;
-      if (c.tipo === 'fiscal') map[c.cadastrado_por].fiscais++;
-      if (c.tipo === 'eleitor') map[c.cadastrado_por].eleitores++;
-      const d = new Date(c.criado_em);
-      if (!map[c.cadastrado_por].ultimo || d > map[c.cadastrado_por].ultimo!) map[c.cadastrado_por].ultimo = d;
-    });
-
-    return Object.entries(map)
-      .map(([id, stats]) => {
-        const agent = usuarios.find(u => u.id === id);
-        return { id, nome: agent?.nome || 'Desconhecido', tipo: agent?.tipo || '—', suplenteId: agentToSuplente[id] || null, ...stats };
-      })
-      .filter(r => r.total > 0)
-      .sort((a, b) => b.total - a.total);
-  }, [filteredCadastros, usuarios, agentToSuplente]);
-
   /* ── ranking por suplente ── */
   const rankingSuplentes = useMemo(() => {
-    const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number; ultimo: Date | null; agentes: Set<string> }> = {};
+    const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number; agentes: Set<string> }> = {};
 
     filteredCadastros.forEach(c => {
-      if (!c.cadastrado_por) return;
-      const supId = agentToSuplente[c.cadastrado_por] || 'sem-suplente';
-      if (!map[supId]) map[supId] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, ultimo: null, agentes: new Set() };
+      // Use suplente_id from the record itself, or fallback to agent's suplente
+      const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null) || 'sem-suplente';
+      if (!map[supId]) map[supId] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, agentes: new Set() };
       map[supId].total++;
-      map[supId].agentes.add(c.cadastrado_por);
+      if (c.cadastrado_por) map[supId].agentes.add(c.cadastrado_por);
       if (c.tipo === 'lideranca') map[supId].liderancas++;
       if (c.tipo === 'fiscal') map[supId].fiscais++;
       if (c.tipo === 'eleitor') map[supId].eleitores++;
-      const d = new Date(c.criado_em);
-      if (!map[supId].ultimo || d > map[supId].ultimo!) map[supId].ultimo = d;
     });
 
     return Object.entries(map)
@@ -247,25 +147,31 @@ export default function AdminDashboard() {
       .sort((a, b) => b.total - a.total);
   }, [filteredCadastros, agentToSuplente, suplentes]);
 
-  /* ── agentes de um suplente (para expandir) ── */
+  /* ── agentes de um suplente expandido ── */
   const agentesDoSuplente = useMemo(() => {
     if (!expandedSuplente) return [];
-    return rankingAgentes
-      .filter(a => {
-        if (expandedSuplente === 'sem-suplente') return !a.suplenteId;
-        return a.suplenteId === expandedSuplente;
+    const agentMap: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number }> = {};
+    
+    filteredCadastros.forEach(c => {
+      if (!c.cadastrado_por) return;
+      const supId = c.suplente_id || agentToSuplente[c.cadastrado_por] || 'sem-suplente';
+      if (supId !== expandedSuplente) return;
+      if (!agentMap[c.cadastrado_por]) agentMap[c.cadastrado_por] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0 };
+      agentMap[c.cadastrado_por].total++;
+      if (c.tipo === 'lideranca') agentMap[c.cadastrado_por].liderancas++;
+      if (c.tipo === 'fiscal') agentMap[c.cadastrado_por].fiscais++;
+      if (c.tipo === 'eleitor') agentMap[c.cadastrado_por].eleitores++;
+    });
+
+    return Object.entries(agentMap)
+      .map(([id, stats]) => {
+        const agent = usuarios.find(u => u.id === id);
+        return { id, nome: agent?.nome || 'Desconhecido', tipo: agent?.tipo || '—', ...stats };
       })
       .sort((a, b) => b.total - a.total);
-  }, [expandedSuplente, rankingAgentes]);
+  }, [expandedSuplente, filteredCadastros, usuarios, agentToSuplente]);
 
-  /* ── distribution by type (pie) ── */
-  const tipoPieData = useMemo(() => [
-    { name: 'Lideranças', value: totais.liderancas },
-    { name: 'Fiscais', value: totais.fiscais },
-    { name: 'Eleitores', value: totais.eleitores },
-  ].filter(d => d.value > 0), [totais]);
-
-  /* ── timeline ── */
+  /* ── timeline data ── */
   const timelineData = useMemo(() => {
     const map: Record<string, { liderancas: number; fiscais: number; eleitores: number }> = {};
     filteredCadastros.forEach(c => {
@@ -285,40 +191,23 @@ export default function AdminDashboard() {
       .map(([dia, vals]) => ({ dia, ...vals, total: vals.liderancas + vals.fiscais + vals.eleitores }));
   }, [filteredCadastros]);
 
-  /* ── bar chart suplentes (top 10) ── */
-  const barSupData = useMemo(() =>
-    rankingSuplentes.slice(0, 10).map(r => ({
-      nome: r.nome.length > 14 ? r.nome.slice(0, 14) + '…' : r.nome,
-      liderancas: r.liderancas,
-      fiscais: r.fiscais,
-      eleitores: r.eleitores,
-    })),
-    [rankingSuplentes]
-  );
-
-  const ultimoCadastro = useMemo(() => {
-    if (cadastros.length === 0) return null;
-    return new Date(Math.max(...cadastros.map(c => new Date(c.criado_em).getTime())));
-  }, [cadastros]);
-
   const tipoLabel = (t: string) => {
     const labels: Record<string, string> = { super_admin: 'Admin', coordenador: 'Coord.', suplente: 'Suplente', lideranca: 'Liderança', fiscal: 'Fiscal' };
     return labels[t] || t;
   };
 
   const getMedalEmoji = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`;
+
   const periodoLabels: Record<Periodo, string> = { hoje: 'Hoje', semana: 'Semana', mes: 'Mês', total: 'Total' };
   const tipoFiltroLabels: Record<TipoFiltro, string> = { todos: 'Todos', lideranca: 'Lideranças', fiscal: 'Fiscais', eleitor: 'Eleitores' };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 size={28} className="animate-spin text-primary" />
       </div>
     );
   }
-
-  const currentRanking = visRanking === 'suplentes' ? rankingSuplentes : rankingAgentes;
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -330,10 +219,8 @@ export default function AdminDashboard() {
             <ArrowLeft size={20} className="text-foreground" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground">Dashboard Admin</h1>
-            <p className="text-[10px] text-muted-foreground">
-              Atualizado {ultimoCadastro ? timeSince(ultimoCadastro) : '—'}
-            </p>
+            <h1 className="text-lg font-bold text-foreground">Painel de Produção</h1>
+            <p className="text-[10px] text-muted-foreground">Controle da rede de suplentes</p>
           </div>
           <div className="text-right">
             <p className="text-lg font-bold text-primary">{totais.total}</p>
@@ -385,79 +272,10 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* ── Distribuição por tipo (pie) ── */}
-        {tipoPieData.length > 0 && (
-          <div className="section-card">
-            <h2 className="section-title">📊 Distribuição por Tipo</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-28 h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={tipoPieData} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={25} strokeWidth={2} stroke="hsl(var(--background))">
-                      {tipoPieData.map(entry => (
-                        <Cell key={entry.name} fill={
-                          entry.name === 'Lideranças' ? TIPO_COLORS.lideranca :
-                          entry.name === 'Fiscais' ? TIPO_COLORS.fiscal : TIPO_COLORS.eleitor
-                        } />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                {tipoPieData.map(s => {
-                  const pct = totais.total > 0 ? Math.round((s.value / totais.total) * 100) : 0;
-                  const color = s.name === 'Lideranças' ? TIPO_COLORS.lideranca : s.name === 'Fiscais' ? TIPO_COLORS.fiscal : TIPO_COLORS.eleitor;
-                  return (
-                    <div key={s.name} className="flex items-center gap-2 text-xs">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-foreground font-medium">{s.name}</span>
-                      <span className="text-muted-foreground ml-auto">{s.value} ({pct}%)</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Status lideranças (pie) ── */}
-        {statusData.length > 0 && tipoFiltro === 'todos' && (
-          <div className="section-card">
-            <h2 className="section-title">🎯 Status das Lideranças</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-28 h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={statusData} dataKey="value" cx="50%" cy="50%" outerRadius={50} innerRadius={25} strokeWidth={2} stroke="hsl(var(--background))">
-                      {statusData.map(entry => (
-                        <Cell key={entry.name} fill={STATUS_COLORS[entry.name] || 'hsl(var(--muted-foreground))'} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex-1 space-y-1.5">
-                {statusData.map(s => {
-                  const total = statusData.reduce((sum, d) => sum + d.value, 0);
-                  const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
-                  return (
-                    <div key={s.name} className="flex items-center gap-2 text-xs">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[s.name] || 'hsl(var(--muted-foreground))' }} />
-                      <span className="text-foreground font-medium">{s.name}</span>
-                      <span className="text-muted-foreground ml-auto">{s.value} ({pct}%)</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ── Timeline ── */}
-        <div className="section-card">
-          <h2 className="section-title">📈 Cadastros por Dia</h2>
-          {timelineData.length > 0 ? (
+        {timelineData.length > 0 && (
+          <div className="section-card">
+            <h2 className="section-title">📈 Cadastros por Dia</h2>
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={timelineData}>
@@ -471,186 +289,102 @@ export default function AdminDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum cadastro no período</p>
-          )}
-        </div>
-
-        {/* ── Top Suplentes (bar horizontal) ── */}
-        {barSupData.length > 0 && (
-          <div className="section-card">
-            <h2 className="section-title">📊 Top Suplentes por Cadastros</h2>
-            <div style={{ height: Math.max(200, barSupData.length * 36) }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barSupData} layout="vertical" margin={{ left: 5, right: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis dataKey="nome" type="category" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} width={100} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, fontSize: 12 }} />
-                  <Bar dataKey="liderancas" name="Lideranças" stackId="a" fill={TIPO_COLORS.lideranca} />
-                  <Bar dataKey="fiscais" name="Fiscais" stackId="a" fill={TIPO_COLORS.fiscal} />
-                  <Bar dataKey="eleitores" name="Eleitores" stackId="a" fill={TIPO_COLORS.eleitor} radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </div>
         )}
 
-        {/* ── Ranking toggle ── */}
+        {/* ── Ranking por Suplente ── */}
         <div className="section-card">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="section-title mb-0">🏆 Ranking</h2>
-            <div className="flex gap-1">
-              <button onClick={() => { setVisRanking('suplentes'); setExpandedSuplente(null); }}
-                className={`px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${visRanking === 'suplentes' ? 'gradient-primary text-white' : 'bg-muted text-muted-foreground'}`}>
-                Por Suplente
-              </button>
-              <button onClick={() => { setVisRanking('agentes'); setExpandedSuplente(null); }}
-                className={`px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${visRanking === 'agentes' ? 'gradient-primary text-white' : 'bg-muted text-muted-foreground'}`}>
-                Por Agente
-              </button>
-            </div>
-          </div>
+          <h2 className="section-title">🏆 Produção por Suplente</h2>
 
-          {visRanking === 'suplentes' ? (
-            /* ── Ranking por suplente (expandível) ── */
-            rankingSuplentes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">Nenhum cadastro no período</p>
-            ) : (
-              <div className="space-y-2">
-                {rankingSuplentes.map((r, i) => (
-                  <div key={r.id}>
-                    <button
-                      onClick={() => setExpandedSuplente(expandedSuplente === r.id ? null : r.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
-                        i === 0 ? 'border-amber-400/40 bg-amber-500/5' :
-                        i === 1 ? 'border-slate-400/30 bg-slate-500/5' :
-                        i === 2 ? 'border-orange-400/30 bg-orange-500/5' :
-                        'border-border bg-card'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg w-8 text-center shrink-0">{getMedalEmoji(i)}</span>
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <UserCheck size={16} className="text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">{r.nome}</p>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            {r.partido && <span>{r.partido}</span>}
-                            {r.regiao && <span>· {r.regiao}</span>}
-                            <span>· {r.qtdAgentes} agente{r.qtdAgentes !== 1 ? 's' : ''}</span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0 flex items-center gap-2">
-                          <div>
-                            <p className="text-xl font-bold text-primary">{r.total}</p>
-                            <p className="text-[9px] text-muted-foreground">total</p>
-                          </div>
-                          {expandedSuplente === r.id ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
-                        </div>
-                      </div>
-                      {/* Breakdown per type */}
-                      <div className="flex gap-2 mt-2 ml-11">
-                        {r.liderancas > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>
-                            <Users size={10} /> {r.liderancas}
-                          </span>
-                        )}
-                        {r.fiscais > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>
-                            <Shield size={10} /> {r.fiscais}
-                          </span>
-                        )}
-                        {r.eleitores > 0 && (
-                          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>
-                            <Target size={10} /> {r.eleitores}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Agentes expandidos desse suplente */}
-                    {expandedSuplente === r.id && agentesDoSuplente.length > 0 && (
-                      <div className="ml-6 mt-1 space-y-1 border-l-2 border-primary/20 pl-3">
-                        {agentesDoSuplente.map((a, ai) => (
-                          <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
-                            <span className="text-xs text-muted-foreground w-5 text-right">{ai + 1}.</span>
-                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <span className="text-[10px] font-bold text-primary">{a.nome.charAt(0)}</span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-foreground truncate">{a.nome}</p>
-                              <span className="text-[9px] text-muted-foreground">{tipoLabel(a.tipo)}</span>
-                            </div>
-                            <div className="flex gap-1.5 shrink-0">
-                              {a.liderancas > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>{a.liderancas}</span>}
-                              {a.fiscais > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>{a.fiscais}</span>}
-                              {a.eleitores > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>{a.eleitores}</span>}
-                            </div>
-                            <p className="text-sm font-bold text-primary shrink-0">{a.total}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )
+          {rankingSuplentes.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhum cadastro no período</p>
           ) : (
-            /* ── Ranking por agente ── */
-            rankingAgentes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">Nenhum cadastro no período</p>
-            ) : (
-              <div className="space-y-2">
-                {rankingAgentes.map((r, i) => (
-                  <div key={r.id} className={`p-3 rounded-xl border transition-all ${
-                    i === 0 ? 'border-amber-400/40 bg-amber-500/5' :
-                    i === 1 ? 'border-slate-400/30 bg-slate-500/5' :
-                    i === 2 ? 'border-orange-400/30 bg-orange-500/5' :
-                    'border-border bg-card'
-                  }`}>
+            <div className="space-y-2">
+              {rankingSuplentes.map((r, i) => (
+                <div key={r.id}>
+                  <button
+                    onClick={() => setExpandedSuplente(expandedSuplente === r.id ? null : r.id)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all active:scale-[0.98] ${
+                      i === 0 ? 'border-amber-400/40 bg-amber-500/5' :
+                      i === 1 ? 'border-slate-400/30 bg-slate-500/5' :
+                      i === 2 ? 'border-orange-400/30 bg-orange-500/5' :
+                      'border-border bg-card'
+                    }`}
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-lg w-8 text-center shrink-0">{getMedalEmoji(i)}</span>
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold text-primary">{r.nome.charAt(0).toUpperCase()}</span>
+                        <UserCheck size={16} className="text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground truncate">{r.nome}</p>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{tipoLabel(r.tipo)}</span>
+                        <p className="text-sm font-semibold text-foreground truncate">{r.nome}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          {r.partido && <span>{r.partido}</span>}
+                          {r.regiao && <span>· {r.regiao}</span>}
+                          <span>· {r.qtdAgentes} agente{r.qtdAgentes !== 1 ? 's' : ''}</span>
                         </div>
-                        {r.ultimo && <p className="text-[10px] text-muted-foreground">Último: {timeSince(r.ultimo)}</p>}
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xl font-bold text-primary">{r.total}</p>
-                        <p className="text-[9px] text-muted-foreground">total</p>
+                      <div className="text-right shrink-0 flex items-center gap-2">
+                        <div>
+                          <p className="text-xl font-bold text-primary">{r.total}</p>
+                          <p className="text-[9px] text-muted-foreground">total</p>
+                        </div>
+                        {expandedSuplente === r.id ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
                       </div>
                     </div>
                     <div className="flex gap-2 mt-2 ml-11">
                       {r.liderancas > 0 && (
                         <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>
-                          <Users size={10} /> {r.liderancas} lid.
+                          <Users size={10} /> {r.liderancas}
                         </span>
                       )}
                       {r.fiscais > 0 && (
                         <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>
-                          <Shield size={10} /> {r.fiscais} fisc.
+                          <Shield size={10} /> {r.fiscais}
                         </span>
                       )}
                       {r.eleitores > 0 && (
                         <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>
-                          <Target size={10} /> {r.eleitores} eleit.
+                          <Target size={10} /> {r.eleitores}
                         </span>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )
+                  </button>
+
+                  {/* Agentes expandidos */}
+                  {expandedSuplente === r.id && agentesDoSuplente.length > 0 && (
+                    <div className="ml-6 mt-1 space-y-1 border-l-2 border-primary/20 pl-3">
+                      {agentesDoSuplente.map((a, ai) => (
+                        <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                          <span className="text-xs text-muted-foreground w-5 text-right">{ai + 1}.</span>
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-[10px] font-bold text-primary">{a.nome.charAt(0)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">{a.nome}</p>
+                            <span className="text-[9px] text-muted-foreground">{tipoLabel(a.tipo)}</span>
+                          </div>
+                          <div className="flex gap-1.5 shrink-0">
+                            {a.liderancas > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>{a.liderancas}</span>}
+                            {a.fiscais > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>{a.fiscais}</span>}
+                            {a.eleitores > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>{a.eleitores}</span>}
+                          </div>
+                          <p className="text-sm font-bold text-primary shrink-0">{a.total}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {expandedSuplente === r.id && agentesDoSuplente.length === 0 && (
+                    <div className="ml-6 mt-1 pl-3 py-2">
+                      <p className="text-[10px] text-muted-foreground">Nenhum agente identificado</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-
       </div>
     </div>
   );

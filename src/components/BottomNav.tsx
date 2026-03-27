@@ -1,8 +1,8 @@
-import { PlusCircle, List, UserCircle, BarChart3, Shield, Users, Network, LayoutDashboard } from 'lucide-react';
+import { PlusCircle, List, UserCircle, BarChart3, Shield, Users, Network } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export type TabId = 'painel' | 'liderancas' | 'fiscais' | 'eleitores' | 'cadastros' | 'rede' | 'perfil';
+export type TabId = 'liderancas' | 'fiscais' | 'eleitores' | 'cadastros' | 'rede' | 'perfil';
 
 interface Props {
   active: TabId;
@@ -15,9 +15,6 @@ export default function BottomNav({ active, onChange }: Props) {
 
   // Build tabs dynamically based on user type
   const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [];
-
-  // Painel is first for everyone
-  tabs.push({ id: 'painel', icon: LayoutDashboard, label: 'Painel' });
 
   // Everyone can register lideranças/fiscais/eleitores
   tabs.push({ id: 'liderancas', icon: PlusCircle, label: 'Lideranças' });
