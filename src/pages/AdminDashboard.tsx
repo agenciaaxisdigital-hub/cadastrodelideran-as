@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Users, TrendingUp, Shield, Target, Filter,
   ChevronDown, ChevronUp, UserCheck, Loader2, Download, List, ArrowRight
