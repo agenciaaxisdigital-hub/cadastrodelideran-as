@@ -143,8 +143,10 @@ export default function AdminDashboard() {
           ...stats,
         };
       })
-      .filter(r => r.total > 0)
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => {
+        if (b.total !== a.total) return b.total - a.total;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      });
   }, [filteredCadastros, agentToSuplente, suplentes]);
 
   /* ── agentes de um suplente expandido ── */
