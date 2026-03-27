@@ -58,10 +58,10 @@ function CredenciaisModal({ info, onClose }: { info: CredenciaisInfo; onClose: (
           </div>
 
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Usuário (e-mail de login)</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Usuário</p>
             <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
-              <p className="text-sm font-mono text-foreground flex-1 break-all">{info.email}</p>
-              <button onClick={() => copiar(info.email, 'Usuário')} className="text-primary shrink-0"><Copy size={14} /></button>
+              <p className="text-sm font-semibold text-foreground flex-1">{info.nome}</p>
+              <button onClick={() => copiar(info.nome, 'Usuário')} className="text-primary shrink-0"><Copy size={14} /></button>
             </div>
           </div>
 
