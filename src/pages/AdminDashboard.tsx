@@ -126,7 +126,8 @@ export default function AdminDashboard() {
     });
 
     filteredCadastros.forEach(c => {
-      const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null) || 'sem-suplente';
+      const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null);
+      if (!supId) return; // skip non-suplente registrations here
       if (!map[supId]) map[supId] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, agentes: new Set() };
       map[supId].total++;
       if (c.cadastrado_por) map[supId].agentes.add(c.cadastrado_por);
@@ -140,7 +141,7 @@ export default function AdminDashboard() {
         const sup = suplentes.find(s => s.id === id);
         return {
           id,
-          nome: sup?.nome || (id === 'sem-suplente' ? 'Sem suplente' : 'Desconhecido'),
+          nome: sup?.nome || 'Desconhecido',
           regiao: sup?.regiao_atuacao || '',
           partido: sup?.partido || '',
           qtdAgentes: ag.size,
@@ -152,6 +153,37 @@ export default function AdminDashboard() {
         return a.nome.localeCompare(b.nome, 'pt-BR');
       });
   }, [filteredCadastros, agentToSuplente, suplentes]);
+
+  /* ── ranking de usuários sem suplente (livres) ── */
+  const rankingLivres = useMemo(() => {
+    // Find users without suplente_id who are not super_admin
+    const livreUserIds = new Set(
+      usuarios.filter(u => !u.suplente_id && u.tipo !== 'super_admin').map(u => u.id)
+    );
+    
+    const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number }> = {};
+
+    filteredCadastros.forEach(c => {
+      if (!c.cadastrado_por) return;
+      // Only count if registrant is a "livre" user AND registration has no suplente
+      const supId = c.suplente_id || agentToSuplente[c.cadastrado_por];
+      if (supId) return; // belongs to a suplente, skip
+      if (!livreUserIds.has(c.cadastrado_por)) return;
+      
+      if (!map[c.cadastrado_por]) map[c.cadastrado_por] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0 };
+      map[c.cadastrado_por].total++;
+      if (c.tipo === 'lideranca') map[c.cadastrado_por].liderancas++;
+      if (c.tipo === 'fiscal') map[c.cadastrado_por].fiscais++;
+      if (c.tipo === 'eleitor') map[c.cadastrado_por].eleitores++;
+    });
+
+    return Object.entries(map)
+      .map(([id, stats]) => {
+        const u = usuarios.find(u => u.id === id);
+        return { id, nome: u?.nome || 'Desconhecido', tipo: u?.tipo || '—', ...stats };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filteredCadastros, usuarios, agentToSuplente]);
 
   /* ── agentes de um suplente expandido ── */
   const agentesDoSuplente = useMemo(() => {
