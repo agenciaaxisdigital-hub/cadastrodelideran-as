@@ -233,7 +233,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-lg font-bold text-foreground">{p.nome}</h2>
-              <p className="text-sm text-muted-foreground">Possível eleitor</p>
+              <p className="text-sm text-muted-foreground">Eleitor</p>
             </div>
             {compromissoBadge(e.compromisso_voto)}
           </div>
