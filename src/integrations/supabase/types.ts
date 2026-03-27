@@ -682,13 +682,6 @@ export type Database = {
             referencedRelation: "hierarquia_usuarios"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "hierarquia_usuarios_suplente_id_fkey"
-            columns: ["suplente_id"]
-            isOneToOne: false
-            referencedRelation: "suplentes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       liderancas: {

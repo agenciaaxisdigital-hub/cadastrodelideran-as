@@ -1,0 +1,1 @@
+ALTER TABLE public.hierarquia_usuarios DROP CONSTRAINT IF EXISTS hierarquia_usuarios_suplente_id_fkey;
