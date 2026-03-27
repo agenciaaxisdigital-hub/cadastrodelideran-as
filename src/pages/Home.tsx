@@ -2,24 +2,15 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNav, { type TabId } from '@/components/BottomNav';
 import TabCadastrar from '@/components/TabCadastrar';
-import TabLiderancas from '@/components/TabLiderancas';
 import TabFiscais from '@/components/TabFiscais';
 import TabEleitores from '@/components/TabEleitores';
+import TabCadastros from '@/components/TabCadastros';
 import TabRede from '@/components/TabRede';
 import TabPerfil from '@/components/TabPerfil';
 
-const tabTitles: Record<TabId, string> = {
-  cadastrar: 'Nova Liderança',
-  liderancas: 'Lideranças',
-  fiscais: 'Fiscais',
-  eleitores: 'Possíveis Eleitores',
-  rede: 'Rede por Suplente',
-  perfil: 'Perfil',
-};
-
 export default function Home() {
   const { isAdmin, tipoUsuario } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('cadastrar');
+  const [activeTab, setActiveTab] = useState<TabId>('liderancas');
   const [refreshKey, setRefreshKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -30,22 +21,21 @@ export default function Home() {
 
   const handleSaved = () => {
     setRefreshKey(k => k + 1);
-    // Navigate to the appropriate list after saving
-    if (activeTab === 'cadastrar') setActiveTab('liderancas');
+    if (activeTab === 'liderancas') setActiveTab('cadastros');
   };
 
-  // Dynamic header title
   const getTitle = () => {
-    if (activeTab === 'liderancas') return isAdmin ? 'Todas as Lideranças' : 'Minhas Lideranças';
-    if (activeTab === 'fiscais') return isAdmin ? 'Todos os Fiscais' : 'Meus Fiscais';
-    if (activeTab === 'eleitores') return isAdmin ? 'Todos os Eleitores' : 'Meus Eleitores';
-    if (activeTab === 'rede') return 'Rede por Suplente';
-    if (activeTab === 'cadastrar') {
+    if (activeTab === 'liderancas') {
       if (tipoUsuario === 'fiscal') return 'Cadastrar Eleitor';
       if (tipoUsuario === 'lideranca') return 'Cadastrar Fiscal';
       return 'Nova Liderança';
     }
-    return tabTitles[activeTab];
+    if (activeTab === 'fiscais') return isAdmin ? 'Todos os Fiscais' : 'Meus Fiscais';
+    if (activeTab === 'eleitores') return isAdmin ? 'Todos os Eleitores' : 'Meus Eleitores';
+    if (activeTab === 'cadastros') return isAdmin ? 'Todos os Cadastros' : 'Meus Cadastros';
+    if (activeTab === 'rede') return 'Rede por Suplente';
+    if (activeTab === 'perfil') return 'Perfil';
+    return '';
   };
 
   return (
@@ -61,10 +51,10 @@ export default function Home() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-[672px] mx-auto px-4 py-4">
-          {activeTab === 'cadastrar' && <TabCadastrar onSaved={handleSaved} />}
-          {activeTab === 'liderancas' && <TabLiderancas refreshKey={refreshKey} />}
+          {activeTab === 'liderancas' && <TabCadastrar onSaved={handleSaved} />}
           {activeTab === 'fiscais' && <TabFiscais refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'eleitores' && <TabEleitores refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
+          {activeTab === 'cadastros' && <TabCadastros refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'rede' && <TabRede />}
           {activeTab === 'perfil' && <TabPerfil />}
         </div>

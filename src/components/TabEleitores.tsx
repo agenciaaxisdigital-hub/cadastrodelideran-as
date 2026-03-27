@@ -27,6 +27,8 @@ interface EleitorRow {
     nome: string; cpf: string | null; telefone: string | null; whatsapp: string | null;
     zona_eleitoral: string | null; secao_eleitoral: string | null;
   };
+  liderancas: { id: string; pessoas: { nome: string } | null } | null;
+  fiscais: { id: string; pessoas: { nome: string } | null } | null;
 }
 
 interface Props {
@@ -58,7 +60,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
     setLoading(true);
     const { data: eleitores } = await supabase
       .from('possiveis_eleitores')
-      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, zona_eleitoral, secao_eleitoral)')
+      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, zona_eleitoral, secao_eleitoral), liderancas:lideranca_id(id, pessoas(nome)), fiscais:fiscal_id(id, pessoas(nome))')
       .order('criado_em', { ascending: false });
     if (eleitores) setData(eleitores as unknown as EleitorRow[]);
     setLoading(false);
@@ -191,6 +193,23 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
             {p.whatsapp && <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-xs font-medium"><MessageCircle size={14} /> WhatsApp</a>}
           </div>
         </div>
+        {(e.liderancas || e.fiscais) && (
+          <div className="section-card">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">🔗 Vinculado a</h3>
+            {e.liderancas?.pessoas?.nome && (
+              <div className="flex justify-between py-1.5 border-b border-border/50">
+                <span className="text-[11px] text-muted-foreground">Liderança</span>
+                <span className="text-sm text-foreground font-medium">{e.liderancas.pessoas.nome}</span>
+              </div>
+            )}
+            {e.fiscais?.pessoas?.nome && (
+              <div className="flex justify-between py-1.5">
+                <span className="text-[11px] text-muted-foreground">Fiscal</span>
+                <span className="text-sm text-foreground font-medium">{e.fiscais.pessoas.nome}</span>
+              </div>
+            )}
+          </div>
+        )}
         {e.observacoes && (
           <div className="section-card">
             <p className="text-[11px] text-muted-foreground mb-1">Observações</p>
@@ -276,7 +295,8 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
                   {compromissoBadge(e.compromisso_voto)}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">
-                  {e.pessoas?.zona_eleitoral ? `Z${e.pessoas.zona_eleitoral}` : ''}{e.pessoas?.secao_eleitoral ? ` S${e.pessoas.secao_eleitoral}` : ''}
+                  {e.liderancas?.pessoas?.nome ? `Líder: ${e.liderancas.pessoas.nome}` : ''}{e.fiscais?.pessoas?.nome ? `${e.liderancas ? ' · ' : ''}Fiscal: ${e.fiscais.pessoas.nome}` : ''}
+                  {!e.liderancas && !e.fiscais && (e.pessoas?.zona_eleitoral ? `Z${e.pessoas.zona_eleitoral}` : '')}{!e.liderancas && !e.fiscais && (e.pessoas?.secao_eleitoral ? ` S${e.pessoas.secao_eleitoral}` : '')}
                 </p>
               </div>
               <ChevronRight size={16} className="text-muted-foreground shrink-0" />
