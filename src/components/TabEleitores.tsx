@@ -193,6 +193,23 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
             {p.whatsapp && <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-xs font-medium"><MessageCircle size={14} /> WhatsApp</a>}
           </div>
         </div>
+        {(e.liderancas || e.fiscais) && (
+          <div className="section-card">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">🔗 Vinculado a</h3>
+            {e.liderancas?.pessoas?.nome && (
+              <div className="flex justify-between py-1.5 border-b border-border/50">
+                <span className="text-[11px] text-muted-foreground">Liderança</span>
+                <span className="text-sm text-foreground font-medium">{e.liderancas.pessoas.nome}</span>
+              </div>
+            )}
+            {e.fiscais?.pessoas?.nome && (
+              <div className="flex justify-between py-1.5">
+                <span className="text-[11px] text-muted-foreground">Fiscal</span>
+                <span className="text-sm text-foreground font-medium">{e.fiscais.pessoas.nome}</span>
+              </div>
+            )}
+          </div>
+        )}
         {e.observacoes && (
           <div className="section-card">
             <p className="text-[11px] text-muted-foreground mb-1">Observações</p>
