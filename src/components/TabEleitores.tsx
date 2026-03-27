@@ -166,7 +166,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
       });
       if (error) throw error;
 
-      toast({ title: '✅ Possível eleitor cadastrado!' });
+      toast({ title: '✅ Eleitor cadastrado!' });
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
       setCpfStatus('idle');
