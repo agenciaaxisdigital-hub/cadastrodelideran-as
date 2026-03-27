@@ -84,8 +84,10 @@
     user-select: text;
   }
   #root {
-    min-height: 100dvh;
+    height: 100%;
+    width: 100%;
     padding-top: env(safe-area-inset-top);
+    overflow: hidden;
   }
   body {
     @apply bg-background text-foreground;
@@ -94,13 +96,27 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
     touch-action: manipulation;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
   html {
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    height: 100%;
+    width: 100%;
   }
   input, select, textarea {
     font-size: 16px !important;
+  }
+  /* Smooth transitions between views */
+  .animate-in {
+    animation: fadeSlideIn 0.2s ease-out;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }
 

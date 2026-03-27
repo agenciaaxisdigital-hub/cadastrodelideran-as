@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "@/components/LoadingScreen";
+import InstallBanner from "@/components/InstallBanner";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -12,10 +13,10 @@ const queryClient = new QueryClient();
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, usuario } = useAuth();
-  if (loading) return <LoadingScreen message="Verificando acesso..." />;
+  if (loading) return <LoadingScreen message="Verificando acesso" showProgress />;
   if (!user) return <Navigate to="/login" replace />;
   // Wait for usuario to load before rendering protected content
-  if (user && !usuario) return <LoadingScreen message="Carregando perfil..." />;
+  if (user && !usuario) return <LoadingScreen message="Carregando perfil" showProgress />;
   return <>{children}</>;
 }
 
@@ -44,6 +45,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <InstallBanner />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
