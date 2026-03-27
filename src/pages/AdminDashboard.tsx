@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft, Users, TrendingUp, Shield, Target, Filter,
-  ChevronDown, ChevronUp, UserCheck, Loader2
+  ChevronDown, ChevronUp, UserCheck, Loader2, Download, List, ArrowRight
 } from 'lucide-react';
+import { exportAllCadastros } from '@/lib/exportXlsx';
 import {
   ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar
 } from 'recharts';
