@@ -17,6 +17,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: false,
+      },
       includeAssets: ["icon-192.png", "icon-512.png"],
       manifest: {
         name: "Rede Política – Dra. Fernanda Sarelli",
