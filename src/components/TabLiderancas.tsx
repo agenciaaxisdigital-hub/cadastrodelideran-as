@@ -241,6 +241,13 @@ export default function TabLiderancas({ refreshKey }: Props) {
 
       <p className="text-xs text-muted-foreground">{filtered.length} liderança{filtered.length !== 1 ? 's' : ''}</p>
 
+      {isAdmin && (
+        <button onClick={() => exportAllCadastros('lideranca')}
+          className="w-full h-9 flex items-center justify-center gap-2 bg-card border border-border rounded-xl text-xs font-medium text-foreground active:scale-[0.97] transition-all">
+          <Download size={14} /> Exportar Lideranças (CSV)
+        </button>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <div key={i} className="section-card animate-pulse"><div className="h-4 bg-muted rounded w-2/3" /><div className="h-3 bg-muted rounded w-1/2 mt-2" /></div>)}
