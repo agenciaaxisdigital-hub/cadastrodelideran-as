@@ -28,7 +28,7 @@ export default function LoadingScreen({ message = 'Carregando...', showProgress 
   }, [showProgress]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-8">
+    <div className="h-full bg-background flex flex-col items-center justify-center gap-6 px-8">
       {/* Logo / Brand */}
       <div className="relative">
         <div className="w-20 h-20 rounded-2xl gradient-primary opacity-15 animate-pulse absolute -inset-2" />
