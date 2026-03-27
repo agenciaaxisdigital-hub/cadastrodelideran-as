@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNav, { type TabId } from '@/components/BottomNav';
+import TabPainel from '@/components/TabPainel';
 import TabCadastrar from '@/components/TabCadastrar';
 import TabFiscais from '@/components/TabFiscais';
 import TabEleitores from '@/components/TabEleitores';
@@ -10,7 +11,7 @@ import TabPerfil from '@/components/TabPerfil';
 
 export default function Home() {
   const { isAdmin, tipoUsuario } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('liderancas');
+  const [activeTab, setActiveTab] = useState<TabId>('painel');
   const [refreshKey, setRefreshKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +26,7 @@ export default function Home() {
   };
 
   const getTitle = () => {
+    if (activeTab === 'painel') return 'Painel de Produção';
     if (activeTab === 'liderancas') {
       if (tipoUsuario === 'fiscal') return 'Cadastrar Eleitor';
       if (tipoUsuario === 'lideranca') return 'Cadastrar Fiscal';
@@ -51,6 +53,7 @@ export default function Home() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-[672px] mx-auto px-4 py-4">
+          {activeTab === 'painel' && <TabPainel />}
           {activeTab === 'liderancas' && <TabCadastrar onSaved={handleSaved} />}
           {activeTab === 'fiscais' && <TabFiscais refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'eleitores' && <TabEleitores refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
