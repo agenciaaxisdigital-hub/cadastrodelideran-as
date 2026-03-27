@@ -126,7 +126,8 @@ export default function AdminDashboard() {
     });
 
     filteredCadastros.forEach(c => {
-      const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null) || 'sem-suplente';
+      const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null);
+      if (!supId) return; // skip non-suplente registrations here
       if (!map[supId]) map[supId] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, agentes: new Set() };
       map[supId].total++;
       if (c.cadastrado_por) map[supId].agentes.add(c.cadastrado_por);
@@ -140,7 +141,7 @@ export default function AdminDashboard() {
         const sup = suplentes.find(s => s.id === id);
         return {
           id,
-          nome: sup?.nome || (id === 'sem-suplente' ? 'Sem suplente' : 'Desconhecido'),
+          nome: sup?.nome || 'Desconhecido',
           regiao: sup?.regiao_atuacao || '',
           partido: sup?.partido || '',
           qtdAgentes: ag.size,
@@ -152,6 +153,37 @@ export default function AdminDashboard() {
         return a.nome.localeCompare(b.nome, 'pt-BR');
       });
   }, [filteredCadastros, agentToSuplente, suplentes]);
+
+  /* ── ranking de usuários sem suplente (livres) ── */
+  const rankingLivres = useMemo(() => {
+    // Find users without suplente_id who are not super_admin
+    const livreUserIds = new Set(
+      usuarios.filter(u => !u.suplente_id && u.tipo !== 'super_admin').map(u => u.id)
+    );
+    
+    const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number }> = {};
+
+    filteredCadastros.forEach(c => {
+      if (!c.cadastrado_por) return;
+      // Only count if registrant is a "livre" user AND registration has no suplente
+      const supId = c.suplente_id || agentToSuplente[c.cadastrado_por];
+      if (supId) return; // belongs to a suplente, skip
+      if (!livreUserIds.has(c.cadastrado_por)) return;
+      
+      if (!map[c.cadastrado_por]) map[c.cadastrado_por] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0 };
+      map[c.cadastrado_por].total++;
+      if (c.tipo === 'lideranca') map[c.cadastrado_por].liderancas++;
+      if (c.tipo === 'fiscal') map[c.cadastrado_por].fiscais++;
+      if (c.tipo === 'eleitor') map[c.cadastrado_por].eleitores++;
+    });
+
+    return Object.entries(map)
+      .map(([id, stats]) => {
+        const u = usuarios.find(u => u.id === id);
+        return { id, nome: u?.nome || 'Desconhecido', tipo: u?.tipo || '—', ...stats };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filteredCadastros, usuarios, agentToSuplente]);
 
   /* ── agentes de um suplente expandido ── */
   const agentesDoSuplente = useMemo(() => {
@@ -391,6 +423,34 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* ── Outros Usuários (sem suplente) ── */}
+        {rankingLivres.length > 0 && (
+          <div className="section-card">
+            <h2 className="section-title">👤 Outros Usuários (fora da rede)</h2>
+            <p className="text-[10px] text-muted-foreground -mt-2 mb-3">Cadastros feitos por usuários sem vínculo a suplente</p>
+            <div className="space-y-1.5">
+              {rankingLivres.map((u, i) => (
+                <div key={u.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-card border border-border">
+                  <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">{u.nome.charAt(0)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{u.nome}</p>
+                    <span className="text-[9px] text-muted-foreground">{tipoLabel(u.tipo)}</span>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {u.liderancas > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>{u.liderancas}</span>}
+                    {u.fiscais > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>{u.fiscais}</span>}
+                    {u.eleitores > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>{u.eleitores}</span>}
+                  </div>
+                  <p className="text-sm font-bold text-primary shrink-0">{u.total}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
