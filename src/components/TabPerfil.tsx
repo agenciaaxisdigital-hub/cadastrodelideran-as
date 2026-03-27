@@ -210,33 +210,40 @@ export default function TabPerfil() {
   const suplentesDisponiveis = suplentes.filter(s => !suplentesJaVinculados.has(s.id));
   const selectedSuplente = suplentes.find(s => s.id === selectedSuplenteId);
 
+  const [modoLivre, setModoLivre] = useState(false);
+  const [nomeLivre, setNomeLivre] = useState('');
+
   const handleCriar = async () => {
-    if (!selectedSuplenteId || !novoSenha.trim()) return;
-    if (!selectedSuplente) return;
+    if (modoLivre) {
+      if (!nomeLivre.trim() || !novoSenha.trim()) return;
+    } else {
+      if (!selectedSuplenteId || !novoSenha.trim()) return;
+      if (!selectedSuplente) return;
+    }
     setCriando(true);
     try {
-      const { data, error } = await supabase.functions.invoke('criar-usuario', {
-        body: {
-          nome: selectedSuplente.nome.trim(),
-          senha: novoSenha,
-          tipo: 'suplente',
-          superior_id: usuario?.id,
-          suplente_id: selectedSuplenteId,
-        },
-      });
+      const nomeUsuario = modoLivre ? nomeLivre.trim() : selectedSuplente!.nome.trim();
+      const body: any = {
+        nome: nomeUsuario,
+        senha: novoSenha,
+        tipo: modoLivre ? 'lideranca' : 'suplente',
+        superior_id: usuario?.id,
+      };
+      if (!modoLivre) body.suplente_id = selectedSuplenteId;
+
+      const { data, error } = await supabase.functions.invoke('criar-usuario', { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const senha = novoSenha;
       setNovoSenha('');
       setSelectedSuplenteId('');
+      setNomeLivre('');
       setShowForm(false);
       await fetchUsuarios();
 
-      // Show modal with credentials after creation
-      const novoUsuario = usuarios.find(u => u.nome === selectedSuplente.nome.trim());
       setModalInfo({
-        usuario: novoUsuario || { id: data.hierarquia_id, nome: selectedSuplente.nome.trim(), tipo: 'suplente', criado_em: new Date().toISOString(), suplente_id: selectedSuplenteId, auth_user_id: data.auth_user_id },
+        usuario: { id: data.hierarquia_id, nome: nomeUsuario, tipo: modoLivre ? 'lideranca' : 'suplente', criado_em: new Date().toISOString(), suplente_id: modoLivre ? null : selectedSuplenteId, auth_user_id: data.auth_user_id },
         senhaOriginal: senha,
       });
     } catch (err: any) {
