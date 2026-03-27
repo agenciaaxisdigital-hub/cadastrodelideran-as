@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth, TipoUsuario } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye, Copy, X } from 'lucide-react';
+import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye, Copy, X, Pencil, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const tipoLabels: Record<TipoUsuario, string> = {
@@ -26,10 +26,18 @@ interface SuplenteOption {
   regiao_atuacao: string | null;
 }
 
-interface CredenciaisInfo {
+interface UsuarioItem {
+  id: string;
   nome: string;
-  email: string;
-  senha?: string;
+  tipo: string;
+  criado_em: string;
+  suplente_id: string | null;
+  auth_user_id: string | null;
+}
+
+interface UsuarioModalInfo {
+  usuario: UsuarioItem;
+  senhaOriginal?: string;
 }
 
 function generateEmail(nome: string) {
@@ -37,11 +45,60 @@ function generateEmail(nome: string) {
   return `${slug}@rede.sarelli.com`;
 }
 
-function CredenciaisModal({ info, onClose }: { info: CredenciaisInfo; onClose: () => void }) {
+function UsuarioModal({ info, onClose, onUpdated }: { info: UsuarioModalInfo; onClose: () => void; onUpdated: () => void }) {
+  const [editNome, setEditNome] = useState(info.usuario.nome);
+  const [editSenha, setEditSenha] = useState(info.senhaOriginal || '');
+  const [salvando, setSalvando] = useState(false);
+  const [deletando, setDeletando] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const copiar = (texto: string, label: string) => {
     navigator.clipboard.writeText(texto);
     toast({ title: `${label} copiado!` });
   };
+
+  const handleSalvar = async () => {
+    if (!editNome.trim()) return;
+    setSalvando(true);
+    try {
+      const body: any = { acao: 'atualizar', hierarquia_id: info.usuario.id, auth_user_id: info.usuario.auth_user_id };
+      if (editNome.trim() !== info.usuario.nome) body.novo_nome = editNome.trim();
+      if (editSenha.trim()) body.nova_senha = editSenha.trim();
+
+      if (!body.novo_nome && !body.nova_senha) {
+        toast({ title: 'Nenhuma alteração' });
+        setSalvando(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('gerenciar-usuario', { body });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: '✅ Usuário atualizado!' });
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      toast({ title: 'Erro ao atualizar', description: err.message, variant: 'destructive' });
+    } finally { setSalvando(false); }
+  };
+
+  const handleDeletar = async () => {
+    setDeletando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('gerenciar-usuario', {
+        body: { acao: 'deletar', hierarquia_id: info.usuario.id, auth_user_id: info.usuario.auth_user_id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: '🗑️ Usuário removido!' });
+      onUpdated();
+      onClose();
+    } catch (err: any) {
+      toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' });
+    } finally { setDeletando(false); }
+  };
+
+  const inputCls = "w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -53,32 +110,64 @@ function CredenciaisModal({ info, onClose }: { info: CredenciaisInfo; onClose: (
 
         <div className="space-y-3">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Nome</p>
-            <p className="text-sm font-semibold text-foreground">{info.nome}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Usuário (nome de login)</p>
+            <div className="flex items-center gap-2">
+              <input value={editNome} onChange={e => setEditNome(e.target.value)} className={inputCls} />
+              <button onClick={() => copiar(editNome, 'Usuário')} className="text-primary shrink-0 p-1"><Copy size={14} /></button>
+            </div>
           </div>
 
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Usuário</p>
-            <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
-              <p className="text-sm font-semibold text-foreground flex-1">{info.nome}</p>
-              <button onClick={() => copiar(info.nome, 'Usuário')} className="text-primary shrink-0"><Copy size={14} /></button>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+              {info.senhaOriginal ? 'Senha' : 'Nova senha (deixe vazio para manter)'}
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                value={editSenha}
+                onChange={e => setEditSenha(e.target.value)}
+                placeholder={info.senhaOriginal ? '' : 'Digite nova senha...'}
+                className={inputCls}
+              />
+              {editSenha && (
+                <button onClick={() => copiar(editSenha, 'Senha')} className="text-primary shrink-0 p-1"><Copy size={14} /></button>
+              )}
             </div>
           </div>
-
-          {info.senha && (
-            <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Senha</p>
-              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
-                <p className="text-sm font-mono text-foreground flex-1">{info.senha}</p>
-                <button onClick={() => copiar(info.senha!, 'Senha')} className="text-primary shrink-0"><Copy size={14} /></button>
-              </div>
-            </div>
-          )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground text-center">
-          {info.senha ? 'Anote essas credenciais! A senha não poderá ser visualizada novamente.' : 'A senha foi definida na criação do usuário.'}
-        </p>
+        {info.senhaOriginal && (
+          <p className="text-[10px] text-muted-foreground text-center">
+            Anote essas credenciais! A senha não poderá ser visualizada novamente.
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSalvar}
+            disabled={salvando || !editNome.trim()}
+            className="flex-1 h-10 rounded-xl text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+          >
+            {salvando ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
+            Salvar
+          </button>
+
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="h-10 px-4 rounded-xl text-sm font-semibold border border-destructive/30 text-destructive active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+            >
+              <Trash2 size={14} />
+            </button>
+          ) : (
+            <button
+              onClick={handleDeletar}
+              disabled={deletando}
+              className="h-10 px-4 rounded-xl text-sm font-semibold bg-destructive text-destructive-foreground active:scale-[0.97] transition-all flex items-center justify-center gap-2"
+            >
+              {deletando ? <Loader2 size={14} className="animate-spin" /> : 'Confirmar'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -86,18 +175,18 @@ function CredenciaisModal({ info, onClose }: { info: CredenciaisInfo; onClose: (
 
 export default function TabPerfil() {
   const { usuario, isAdmin, tipoUsuario, signOut } = useAuth();
-  const [usuarios, setUsuarios] = useState<{ id: string; nome: string; tipo: string; criado_em: string; suplente_id: string | null }[]>([]);
+  const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [novoSenha, setNovoSenha] = useState('');
   const [criando, setCriando] = useState(false);
   const [suplentes, setSuplentes] = useState<SuplenteOption[]>([]);
   const [selectedSuplenteId, setSelectedSuplenteId] = useState('');
-  const [credenciais, setCredenciais] = useState<CredenciaisInfo | null>(null);
+  const [modalInfo, setModalInfo] = useState<UsuarioModalInfo | null>(null);
 
   const fetchUsuarios = async () => {
-    const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em, suplente_id').eq('ativo', true).order('criado_em', { ascending: false });
-    if (data) setUsuarios(data);
+    const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em, suplente_id, auth_user_id').eq('ativo', true).order('criado_em', { ascending: false });
+    if (data) setUsuarios(data as UsuarioItem[]);
     setLoaded(true);
   };
 
@@ -138,21 +227,25 @@ export default function TabPerfil() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const email = generateEmail(selectedSuplente.nome);
-      setCredenciais({ nome: selectedSuplente.nome, email, senha: novoSenha });
-
+      const senha = novoSenha;
       setNovoSenha('');
       setSelectedSuplenteId('');
       setShowForm(false);
-      fetchUsuarios();
+      await fetchUsuarios();
+
+      // Show modal with credentials after creation
+      const novoUsuario = usuarios.find(u => u.nome === selectedSuplente.nome.trim());
+      setModalInfo({
+        usuario: novoUsuario || { id: data.hierarquia_id, nome: selectedSuplente.nome.trim(), tipo: 'suplente', criado_em: new Date().toISOString(), suplente_id: selectedSuplenteId, auth_user_id: data.auth_user_id },
+        senhaOriginal: senha,
+      });
     } catch (err: any) {
       toast({ title: 'Erro ao criar', description: err.message, variant: 'destructive' });
     } finally { setCriando(false); }
   };
 
-  const handleClickUsuario = (u: { nome: string }) => {
-    const email = generateEmail(u.nome);
-    setCredenciais({ nome: u.nome, email });
+  const handleClickUsuario = (u: UsuarioItem) => {
+    setModalInfo({ usuario: u });
   };
 
   const inputCls = "w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
@@ -166,7 +259,7 @@ export default function TabPerfil() {
 
   return (
     <div className="space-y-4 pb-24">
-      {credenciais && <CredenciaisModal info={credenciais} onClose={() => setCredenciais(null)} />}
+      {modalInfo && <UsuarioModal info={modalInfo} onClose={() => setModalInfo(null)} onUpdated={fetchUsuarios} />}
 
       <div className="section-card flex flex-col items-center text-center">
         <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center">
@@ -196,11 +289,7 @@ export default function TabPerfil() {
               <p className="text-xs font-semibold text-foreground">Criar acesso para suplente</p>
               <p className="text-[10px] text-muted-foreground">Selecione o suplente já cadastrado e defina uma senha para ele acessar o app.</p>
 
-              <select
-                value={selectedSuplenteId}
-                onChange={e => setSelectedSuplenteId(e.target.value)}
-                className={selectCls}
-              >
+              <select value={selectedSuplenteId} onChange={e => setSelectedSuplenteId(e.target.value)} className={selectCls}>
                 <option value="">Selecione o suplente...</option>
                 {suplentesDisponiveis.map(s => (
                   <option key={s.id} value={s.id}>
@@ -218,13 +307,7 @@ export default function TabPerfil() {
                 </div>
               )}
 
-              <input
-                type="text"
-                value={novoSenha}
-                onChange={e => setNovoSenha(e.target.value)}
-                placeholder="Senha de acesso"
-                className={inputCls}
-              />
+              <input type="text" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} placeholder="Senha de acesso" className={inputCls} />
 
               <button
                 onClick={handleCriar}
