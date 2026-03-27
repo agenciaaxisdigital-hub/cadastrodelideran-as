@@ -283,7 +283,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="h-full bg-background overflow-y-auto overscroll-contain pb-8">
       <div className="h-[1.5px] gradient-header" />
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border">
