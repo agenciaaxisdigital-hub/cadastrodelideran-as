@@ -16,23 +16,21 @@ export default function BottomNav({ active, onChange }: Props) {
   // Build tabs dynamically based on user type
   const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [];
 
-  // Everyone can register (different things based on type)
-  tabs.push({ id: 'cadastrar', icon: PlusCircle, label: 'Cadastrar' });
-
-  // Suplentes, coordenadores and admins see lideranças
-  if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente') {
-    tabs.push({ id: 'liderancas', icon: List, label: 'Lideranças' });
-  }
+  // Everyone can register lideranças/fiscais/eleitores
+  tabs.push({ id: 'liderancas', icon: PlusCircle, label: 'Lideranças' });
 
   // Suplentes, lideranças, coordenadores and admins see fiscais
   if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca') {
     tabs.push({ id: 'fiscais', icon: Shield, label: 'Fiscais' });
   }
 
-  // Everyone except super_admin sees eleitores tab (fiscais register voters)
+  // Everyone sees eleitores tab
   if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador' || tipoUsuario === 'suplente' || tipoUsuario === 'lideranca' || tipoUsuario === 'fiscal') {
     tabs.push({ id: 'eleitores', icon: Users, label: 'Eleitores' });
   }
+
+  // Cadastros: unified view of all registrations
+  tabs.push({ id: 'cadastros', icon: List, label: 'Cadastros' });
 
   // Admin sees full network view by suplente
   if (tipoUsuario === 'super_admin' || tipoUsuario === 'coordenador') {
