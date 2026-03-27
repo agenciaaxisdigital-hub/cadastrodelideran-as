@@ -120,8 +120,12 @@ export default function AdminDashboard() {
   const rankingSuplentes = useMemo(() => {
     const map: Record<string, { total: number; liderancas: number; fiscais: number; eleitores: number; agentes: Set<string> }> = {};
 
+    // Start with ALL suplentes so they always appear
+    suplentes.forEach(s => {
+      map[s.id] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, agentes: new Set() };
+    });
+
     filteredCadastros.forEach(c => {
-      // Use suplente_id from the record itself, or fallback to agent's suplente
       const supId = c.suplente_id || (c.cadastrado_por ? agentToSuplente[c.cadastrado_por] : null) || 'sem-suplente';
       if (!map[supId]) map[supId] = { total: 0, liderancas: 0, fiscais: 0, eleitores: 0, agentes: new Set() };
       map[supId].total++;
