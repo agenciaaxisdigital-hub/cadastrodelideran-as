@@ -53,6 +53,7 @@ export default function Home() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div className="max-w-[672px] mx-auto px-4 py-4">
+          {activeTab === 'painel' && <TabPainel />}
           {activeTab === 'liderancas' && <TabCadastrar onSaved={handleSaved} />}
           {activeTab === 'fiscais' && <TabFiscais refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'eleitores' && <TabEleitores refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
