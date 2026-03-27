@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import BottomNav, { type TabId } from '@/components/BottomNav';
-import TabPainel from '@/components/TabPainel';
 import TabCadastrar from '@/components/TabCadastrar';
 import TabFiscais from '@/components/TabFiscais';
 import TabEleitores from '@/components/TabEleitores';
