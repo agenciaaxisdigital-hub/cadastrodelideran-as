@@ -2,7 +2,7 @@ import { PlusCircle, List, UserCircle, BarChart3, Shield, Users, Network } from 
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export type TabId = 'cadastrar' | 'liderancas' | 'fiscais' | 'eleitores' | 'rede' | 'perfil';
+export type TabId = 'liderancas' | 'fiscais' | 'eleitores' | 'cadastros' | 'rede' | 'perfil';
 
 interface Props {
   active: TabId;
