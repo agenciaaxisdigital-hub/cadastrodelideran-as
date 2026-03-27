@@ -423,6 +423,34 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {/* ── Outros Usuários (sem suplente) ── */}
+        {rankingLivres.length > 0 && (
+          <div className="section-card">
+            <h2 className="section-title">👤 Outros Usuários (fora da rede)</h2>
+            <p className="text-[10px] text-muted-foreground -mt-2 mb-3">Cadastros feitos por usuários sem vínculo a suplente</p>
+            <div className="space-y-1.5">
+              {rankingLivres.map((u, i) => (
+                <div key={u.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-card border border-border">
+                  <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">{u.nome.charAt(0)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{u.nome}</p>
+                    <span className="text-[9px] text-muted-foreground">{tipoLabel(u.tipo)}</span>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {u.liderancas > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(217, 91%, 60%, 0.1)', color: TIPO_COLORS.lideranca }}>{u.liderancas}</span>}
+                    {u.fiscais > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(142, 71%, 45%, 0.1)', color: TIPO_COLORS.fiscal }}>{u.fiscais}</span>}
+                    {u.eleitores > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'hsla(280, 70%, 55%, 0.1)', color: TIPO_COLORS.eleitor }}>{u.eleitores}</span>}
+                  </div>
+                  <p className="text-sm font-bold text-primary shrink-0">{u.total}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
