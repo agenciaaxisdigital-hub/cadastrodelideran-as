@@ -10,7 +10,7 @@ import TabPerfil from '@/components/TabPerfil';
 
 export default function Home() {
   const { isAdmin, tipoUsuario } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('painel');
+  const [activeTab, setActiveTab] = useState<TabId>('liderancas');
   const [refreshKey, setRefreshKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
