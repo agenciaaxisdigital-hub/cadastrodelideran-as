@@ -91,15 +91,46 @@ export default function AdminDashboard() {
       ...(fRes.data || []).map(r => ({ ...r, tipo: 'fiscal' as const })),
       ...(eRes.data || []).map(r => ({ ...r, tipo: 'eleitor' as const })),
     ];
-    setCadastros(allCadastros);
-    if (uRes.data) setUsuarios(uRes.data);
 
-    // Status distribution for lideranças
-    if (statusRes.data) {
-      const map: Record<string, number> = {};
-      statusRes.data.forEach((l: any) => { map[l.status || 'Sem status'] = (map[l.status || 'Sem status'] || 0) + 1; });
-      setStatusData(Object.entries(map).map(([name, value]) => ({ name, value })));
+    // ── MOCK DATA (remover depois) ──
+    const mockAgentIds = ['agent-1', 'agent-2', 'agent-3', 'agent-4', 'agent-5'];
+    const mockAgentNames = ['Carlos Silva', 'Maria Souza', 'João Pereira', 'Ana Costa', 'Pedro Santos'];
+    const mockAgents: HierarquiaUsuario[] = mockAgentIds.map((id, i) => ({
+      id,
+      nome: mockAgentNames[i],
+      tipo: i < 2 ? 'suplente' : i < 4 ? 'lideranca' : 'coordenador',
+      criado_em: new Date(2026, 2, 1).toISOString(),
+    }));
+
+    const mockCadastros: Cadastro[] = [];
+    const tipos: Array<'lideranca' | 'fiscal' | 'eleitor'> = ['lideranca', 'fiscal', 'eleitor'];
+    for (let d = 0; d < 25; d++) {
+      const count = Math.floor(Math.random() * 8) + 2;
+      for (let j = 0; j < count; j++) {
+        const date = new Date(2026, 2, 3 + d, Math.floor(Math.random() * 12) + 8);
+        mockCadastros.push({
+          id: `mock-${d}-${j}`,
+          criado_em: date.toISOString(),
+          cadastrado_por: mockAgentIds[Math.floor(Math.random() * mockAgentIds.length)],
+          tipo: tipos[Math.floor(Math.random() * 3)],
+        });
+      }
     }
+
+    setCadastros([...allCadastros, ...mockCadastros]);
+    setUsuarios([...(uRes.data || []), ...mockAgents]);
+
+    // Status distribution (mock)
+    const mockStatusData = [
+      { name: 'Ativa', value: 42 },
+      { name: 'Potencial', value: 18 },
+      { name: 'Em negociação', value: 12 },
+      { name: 'Fraca', value: 7 },
+      { name: 'Descartada', value: 3 },
+    ];
+    setStatusData(mockStatusData);
+    // ── FIM MOCK DATA ──
+
     setLoading(false);
   };
 
