@@ -54,6 +54,39 @@ export default function AdminDashboard() {
   const [periodo, setPeriodo] = useState<Periodo>('total');
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('todos');
   const [expandedSuplente, setExpandedSuplente] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [showRecords, setShowRecords] = useState<'lideranca' | 'fiscal' | 'eleitor' | null>(null);
+  const [recordsData, setRecordsData] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  const handleExport = async (tipo?: 'lideranca' | 'fiscal' | 'eleitor') => {
+    setExporting(true);
+    try {
+      const count = await exportAllCadastros(tipo);
+      toast({ title: `✅ ${count} registros exportados!` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao exportar', description: err.message, variant: 'destructive' });
+    } finally { setExporting(false); }
+  };
+
+  const handleShowRecords = async (tipo: 'lideranca' | 'fiscal' | 'eleitor') => {
+    if (showRecords === tipo) { setShowRecords(null); return; }
+    setShowRecords(tipo);
+    setLoadingRecords(true);
+    try {
+      if (tipo === 'lideranca') {
+        const { data } = await supabase.from('liderancas').select('id, status, criado_em, cadastrado_por, pessoas(nome, cpf, telefone), hierarquia_usuarios!liderancas_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      } else if (tipo === 'fiscal') {
+        const { data } = await supabase.from('fiscais').select('id, status, criado_em, cadastrado_por, zona_fiscal, secao_fiscal, pessoas(nome, cpf, telefone), hierarquia_usuarios!fiscais_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      } else {
+        const { data } = await supabase.from('possiveis_eleitores').select('id, compromisso_voto, criado_em, cadastrado_por, pessoas(nome, cpf, telefone), hierarquia_usuarios!possiveis_eleitores_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      }
+    } catch { setRecordsData([]); }
+    finally { setLoadingRecords(false); }
+  };
 
   useEffect(() => {
     if (!isAdmin) { navigate('/'); return; }
