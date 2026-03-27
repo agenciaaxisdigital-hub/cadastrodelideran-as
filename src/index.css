@@ -84,8 +84,10 @@
     user-select: text;
   }
   #root {
-    min-height: 100dvh;
+    height: 100%;
+    width: 100%;
     padding-top: env(safe-area-inset-top);
+    overflow: hidden;
   }
   body {
     @apply bg-background text-foreground;

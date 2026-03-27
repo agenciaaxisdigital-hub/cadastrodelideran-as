@@ -16,7 +16,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (loading) return <LoadingScreen message="Verificando acesso" showProgress />;
   if (!user) return <Navigate to="/login" replace />;
   // Wait for usuario to load before rendering protected content
-  if (user && !usuario) return <LoadingScreen message="Carregando perfil..." />;
+  if (user && !usuario) return <LoadingScreen message="Carregando perfil" showProgress />;
   return <>{children}</>;
 }
 
