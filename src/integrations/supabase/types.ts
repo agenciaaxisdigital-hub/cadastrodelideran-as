@@ -1043,6 +1043,137 @@ export type Database = {
         }
         Relationships: []
       }
+      sindspag_associados: {
+        Row: {
+          apoiadores: number | null
+          atualizado_em: string
+          colegio_eleitoral: string | null
+          comprometimento: string | null
+          cpf: string | null
+          criado_em: string
+          criado_por: string | null
+          eh_socio_atual: boolean | null
+          email: string | null
+          facebook: string | null
+          foi_socio_quando: string | null
+          id: string
+          instagram: string | null
+          ja_foi_socio: boolean | null
+          ligacao_politica: string | null
+          meta_votos: number | null
+          municipio: string | null
+          nome: string
+          observacoes: string | null
+          posicao_ligacao: string | null
+          regiao_atuacao: string | null
+          secao_eleitoral: string | null
+          situacao_titulo: string | null
+          socio_desde: string | null
+          status: string | null
+          telefone: string | null
+          titulo_eleitor: string | null
+          uf: string | null
+          whatsapp: string | null
+          zona_eleitoral: string | null
+        }
+        Insert: {
+          apoiadores?: number | null
+          atualizado_em?: string
+          colegio_eleitoral?: string | null
+          comprometimento?: string | null
+          cpf?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          eh_socio_atual?: boolean | null
+          email?: string | null
+          facebook?: string | null
+          foi_socio_quando?: string | null
+          id?: string
+          instagram?: string | null
+          ja_foi_socio?: boolean | null
+          ligacao_politica?: string | null
+          meta_votos?: number | null
+          municipio?: string | null
+          nome: string
+          observacoes?: string | null
+          posicao_ligacao?: string | null
+          regiao_atuacao?: string | null
+          secao_eleitoral?: string | null
+          situacao_titulo?: string | null
+          socio_desde?: string | null
+          status?: string | null
+          telefone?: string | null
+          titulo_eleitor?: string | null
+          uf?: string | null
+          whatsapp?: string | null
+          zona_eleitoral?: string | null
+        }
+        Update: {
+          apoiadores?: number | null
+          atualizado_em?: string
+          colegio_eleitoral?: string | null
+          comprometimento?: string | null
+          cpf?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          eh_socio_atual?: boolean | null
+          email?: string | null
+          facebook?: string | null
+          foi_socio_quando?: string | null
+          id?: string
+          instagram?: string | null
+          ja_foi_socio?: boolean | null
+          ligacao_politica?: string | null
+          meta_votos?: number | null
+          municipio?: string | null
+          nome?: string
+          observacoes?: string | null
+          posicao_ligacao?: string | null
+          regiao_atuacao?: string | null
+          secao_eleitoral?: string | null
+          situacao_titulo?: string | null
+          socio_desde?: string | null
+          status?: string | null
+          telefone?: string | null
+          titulo_eleitor?: string | null
+          uf?: string | null
+          whatsapp?: string | null
+          zona_eleitoral?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sindspag_associados_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "sindspag_usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sindspag_usuarios: {
+        Row: {
+          cargo: string
+          criado_em: string
+          id: string
+          nome: string
+          senha_hash: string
+        }
+        Insert: {
+          cargo?: string
+          criado_em?: string
+          id?: string
+          nome: string
+          senha_hash: string
+        }
+        Update: {
+          cargo?: string
+          criado_em?: string
+          id?: string
+          nome?: string
+          senha_hash?: string
+        }
+        Relationships: []
+      }
       suplentes: {
         Row: {
           ano_eleicao: number | null
@@ -1187,6 +1318,14 @@ export type Database = {
       get_subordinados: { Args: { usuario_id: string }; Returns: string[] }
       get_usuario_id: { Args: never; Returns: string }
       is_app_admin: { Args: never; Returns: boolean }
+      sindspag_criar_usuario: {
+        Args: { p_cargo?: string; p_nome: string; p_senha: string }
+        Returns: Json
+      }
+      sindspag_login: {
+        Args: { p_nome: string; p_senha: string }
+        Returns: Json
+      }
       tem_cargo: {
         Args: {
           _cargo: Database["public"]["Enums"]["cargo_admin"]
