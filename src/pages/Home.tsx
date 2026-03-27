@@ -40,7 +40,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <div className="h-[1.5px] gradient-header shrink-0" />
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border shrink-0">
@@ -50,8 +50,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="max-w-[672px] mx-auto px-4 py-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="max-w-[672px] mx-auto px-4 py-4 animate-in">
           {activeTab === 'liderancas' && <TabCadastrar onSaved={handleSaved} />}
           {activeTab === 'fiscais' && <TabFiscais refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
           {activeTab === 'eleitores' && <TabEleitores refreshKey={refreshKey} onSaved={() => setRefreshKey(k => k + 1)} />}
