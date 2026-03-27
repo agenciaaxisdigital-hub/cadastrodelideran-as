@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, CheckCircle2, Search, ChevronRight, ArrowLeft, Phone, MessageCircle, Trash2 } from 'lucide-react';
+import { Loader2, CheckCircle2, Search, ChevronRight, ArrowLeft, Phone, MessageCircle, Trash2, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
+import { maskCPF } from '@/lib/cpf';
 import { toast } from '@/hooks/use-toast';
+import StatusBadge from '@/components/StatusBadge';
 
 const compromissoOptions = ['Confirmado', 'Provável', 'Indefinido', 'Improvável'];
+const situacoesTitulo = ['Regular', 'Cancelado', 'Suspenso', 'Não informado'];
 
 const emptyForm = {
-  cpf: '', nome: '', telefone: '', whatsapp: '',
+  cpf: '', nome: '', telefone: '', whatsapp: '', email: '',
+  instagram: '', facebook: '',
   titulo_eleitor: '', zona_eleitoral: '', secao_eleitoral: '',
-  municipio_eleitoral: '', uf_eleitoral: '',
+  municipio_eleitoral: '', uf_eleitoral: '', colegio_eleitoral: '',
+  endereco_colegio: '', situacao_titulo: '',
   lideranca_id: '', fiscal_id: '',
   compromisso_voto: 'Indefinido', observacoes: '',
 };
@@ -25,7 +30,11 @@ interface EleitorRow {
   criado_em: string;
   pessoas: {
     nome: string; cpf: string | null; telefone: string | null; whatsapp: string | null;
+    email: string | null; instagram: string | null; facebook: string | null;
     zona_eleitoral: string | null; secao_eleitoral: string | null;
+    titulo_eleitor: string | null; municipio_eleitoral: string | null;
+    uf_eleitoral: string | null; colegio_eleitoral: string | null;
+    endereco_colegio: string | null; situacao_titulo: string | null;
   };
   liderancas: { id: string; pessoas: { nome: string } | null } | null;
   fiscais: { id: string; pessoas: { nome: string } | null } | null;
@@ -60,7 +69,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
     setLoading(true);
     const { data: eleitores } = await supabase
       .from('possiveis_eleitores')
-      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, zona_eleitoral, secao_eleitoral), liderancas:lideranca_id(id, pessoas(nome)), fiscais:fiscal_id(id, pessoas(nome))')
+      .select('id, compromisso_voto, lideranca_id, fiscal_id, cadastrado_por, observacoes, criado_em, pessoas(nome, cpf, telefone, whatsapp, email, instagram, facebook, zona_eleitoral, secao_eleitoral, titulo_eleitor, municipio_eleitoral, uf_eleitoral, colegio_eleitoral, endereco_colegio, situacao_titulo), liderancas:lideranca_id(id, pessoas(nome)), fiscais:fiscal_id(id, pessoas(nome))')
       .order('criado_em', { ascending: false });
     if (eleitores) setData(eleitores as unknown as EleitorRow[]);
     setLoading(false);
@@ -83,10 +92,24 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
     try {
       const { data: pessoa } = await supabase.from('pessoas').select('*').eq('cpf', cpfClean).maybeSingle();
       if (pessoa) {
-        setForm(f => ({ ...f, cpf: pessoa.cpf || cpfClean, nome: pessoa.nome || f.nome, telefone: pessoa.telefone || f.telefone, whatsapp: pessoa.whatsapp || f.whatsapp, titulo_eleitor: pessoa.titulo_eleitor || f.titulo_eleitor, zona_eleitoral: pessoa.zona_eleitoral || f.zona_eleitoral, secao_eleitoral: pessoa.secao_eleitoral || f.secao_eleitoral, municipio_eleitoral: pessoa.municipio_eleitoral || f.municipio_eleitoral, uf_eleitoral: pessoa.uf_eleitoral || f.uf_eleitoral }));
+        setForm(f => ({
+          ...f, cpf: pessoa.cpf || cpfClean,
+          nome: pessoa.nome || f.nome, telefone: pessoa.telefone || f.telefone,
+          whatsapp: pessoa.whatsapp || f.whatsapp, email: pessoa.email || f.email,
+          instagram: pessoa.instagram || f.instagram, facebook: pessoa.facebook || f.facebook,
+          titulo_eleitor: pessoa.titulo_eleitor || f.titulo_eleitor,
+          zona_eleitoral: pessoa.zona_eleitoral || f.zona_eleitoral,
+          secao_eleitoral: pessoa.secao_eleitoral || f.secao_eleitoral,
+          municipio_eleitoral: pessoa.municipio_eleitoral || f.municipio_eleitoral,
+          uf_eleitoral: pessoa.uf_eleitoral || f.uf_eleitoral,
+          colegio_eleitoral: pessoa.colegio_eleitoral || f.colegio_eleitoral,
+          endereco_colegio: pessoa.endereco_colegio || f.endereco_colegio,
+          situacao_titulo: pessoa.situacao_titulo || f.situacao_titulo,
+        }));
         setPessoaExistenteId(pessoa.id);
         setCpfStatus('confirmado');
         setCpfNomePessoa(pessoa.nome);
+        toast({ title: '✅ Pessoa encontrada!', description: `Dados de ${pessoa.nome} preenchidos` });
       } else { setCpfStatus('idle'); }
     } catch (err) { console.error(err); }
     finally { setValidandoCPF(false); }
@@ -108,12 +131,24 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
       let pessoaId: string;
       if (pessoaExistenteId) {
         pessoaId = pessoaExistenteId;
+        await supabase.from('pessoas').update({
+          nome: form.nome, telefone: form.telefone || null, whatsapp: form.whatsapp || null,
+          email: form.email || null, instagram: form.instagram || null, facebook: form.facebook || null,
+          titulo_eleitor: form.titulo_eleitor || null, zona_eleitoral: form.zona_eleitoral || null,
+          secao_eleitoral: form.secao_eleitoral || null, municipio_eleitoral: form.municipio_eleitoral || null,
+          uf_eleitoral: form.uf_eleitoral || null, colegio_eleitoral: form.colegio_eleitoral || null,
+          endereco_colegio: form.endereco_colegio || null, situacao_titulo: form.situacao_titulo || null,
+          atualizado_em: new Date().toISOString(),
+        }).eq('id', pessoaId);
       } else {
         const { data: novaPessoa, error } = await supabase.from('pessoas').insert({
           cpf: form.cpf || null, nome: form.nome, telefone: form.telefone || null,
-          whatsapp: form.whatsapp || null, titulo_eleitor: form.titulo_eleitor || null,
-          zona_eleitoral: form.zona_eleitoral || null, secao_eleitoral: form.secao_eleitoral || null,
-          municipio_eleitoral: form.municipio_eleitoral || null, uf_eleitoral: form.uf_eleitoral || null,
+          whatsapp: form.whatsapp || null, email: form.email || null,
+          instagram: form.instagram || null, facebook: form.facebook || null,
+          titulo_eleitor: form.titulo_eleitor || null, zona_eleitoral: form.zona_eleitoral || null,
+          secao_eleitoral: form.secao_eleitoral || null, municipio_eleitoral: form.municipio_eleitoral || null,
+          uf_eleitoral: form.uf_eleitoral || null, colegio_eleitoral: form.colegio_eleitoral || null,
+          endereco_colegio: form.endereco_colegio || null, situacao_titulo: form.situacao_titulo || null,
         }).select('id').single();
         if (error) throw error;
         pessoaId = novaPessoa!.id;
@@ -134,6 +169,7 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
       setForm({ ...emptyForm });
       setPessoaExistenteId(null);
       setCpfStatus('idle');
+      setCpfNomePessoa('');
       setMode('list');
       fetchData();
       onSaved?.();
@@ -154,11 +190,12 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
   const filtered = data.filter(e => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return (e.pessoas?.nome?.toLowerCase() || '').includes(q);
+    return (e.pessoas?.nome?.toLowerCase() || '').includes(q) || (e.pessoas?.cpf || '').includes(q);
   });
 
   const inputCls = "w-full h-11 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
   const selectCls = inputCls;
+  const textareaCls = "w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none";
   const cpfBorderCls = cpfStatus === 'confirmado' ? 'border-emerald-500 ring-1 ring-emerald-500/30' : '';
 
   const compromissoBadge = (c: string | null) => {
@@ -169,6 +206,17 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
       'Improvável': 'bg-red-500/10 text-red-600',
     };
     return <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${colors[c || ''] || 'bg-muted text-muted-foreground'}`}>{c || 'Indefinido'}</span>;
+  };
+
+  const Info = ({ label, value, link }: { label: string; value?: string | null; link?: string }) => {
+    if (!value) return null;
+    return (
+      <div className="flex justify-between items-start py-1.5 border-b border-border/50 last:border-0">
+        <span className="text-[11px] text-muted-foreground shrink-0">{label}</span>
+        {link ? <a href={link} target="_blank" rel="noopener" className="text-sm text-primary text-right ml-2">{value}</a>
+          : <span className="text-sm text-foreground text-right ml-2 break-words">{value}</span>}
+      </div>
+    );
   };
 
   // DETAIL VIEW
@@ -190,32 +238,45 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
           </div>
           <div className="flex gap-2 pt-2">
             {p.telefone && <a href={`tel:${p.telefone}`} className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-lg text-xs font-medium"><Phone size={14} /> Ligar</a>}
-            {p.whatsapp && <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-xs font-medium"><MessageCircle size={14} /> WhatsApp</a>}
+            {p.whatsapp && <a href={`https://wa.me/55${p.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-medium"><MessageCircle size={14} /> WhatsApp</a>}
           </div>
         </div>
+
+        <div className="section-card">
+          <h3 className="section-title">👤 Dados Pessoais</h3>
+          <Info label="CPF" value={p.cpf ? maskCPF(p.cpf) : null} />
+          <Info label="Telefone" value={p.telefone} link={p.telefone ? `tel:${p.telefone}` : undefined} />
+          <Info label="WhatsApp" value={p.whatsapp} />
+          <Info label="E-mail" value={p.email} link={p.email ? `mailto:${p.email}` : undefined} />
+          <Info label="Instagram" value={p.instagram} link={p.instagram ? `https://instagram.com/${p.instagram.replace('@', '')}` : undefined} />
+          <Info label="Facebook" value={p.facebook} />
+        </div>
+
+        <div className="section-card">
+          <h3 className="section-title">🗳️ Dados Eleitorais</h3>
+          <Info label="Título" value={p.titulo_eleitor} />
+          <Info label="Zona / Seção" value={p.zona_eleitoral || p.secao_eleitoral ? `${p.zona_eleitoral || '—'} / ${p.secao_eleitoral || '—'}` : null} />
+          <Info label="Município / UF" value={p.municipio_eleitoral || p.uf_eleitoral ? `${p.municipio_eleitoral || '—'} / ${p.uf_eleitoral || '—'}` : null} />
+          <Info label="Colégio" value={p.colegio_eleitoral} />
+          <Info label="End. colégio" value={p.endereco_colegio} />
+          <Info label="Situação" value={p.situacao_titulo} />
+        </div>
+
         {(e.liderancas || e.fiscais) && (
           <div className="section-card">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">🔗 Vinculado a</h3>
-            {e.liderancas?.pessoas?.nome && (
-              <div className="flex justify-between py-1.5 border-b border-border/50">
-                <span className="text-[11px] text-muted-foreground">Liderança</span>
-                <span className="text-sm text-foreground font-medium">{e.liderancas.pessoas.nome}</span>
-              </div>
-            )}
-            {e.fiscais?.pessoas?.nome && (
-              <div className="flex justify-between py-1.5">
-                <span className="text-[11px] text-muted-foreground">Fiscal</span>
-                <span className="text-sm text-foreground font-medium">{e.fiscais.pessoas.nome}</span>
-              </div>
-            )}
+            <h3 className="section-title">🔗 Vinculado a</h3>
+            {e.liderancas?.pessoas?.nome && <Info label="Liderança" value={e.liderancas.pessoas.nome} />}
+            {e.fiscais?.pessoas?.nome && <Info label="Fiscal" value={e.fiscais.pessoas.nome} />}
           </div>
         )}
+
         {e.observacoes && (
           <div className="section-card">
             <p className="text-[11px] text-muted-foreground mb-1">Observações</p>
             <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{e.observacoes}</p>
           </div>
         )}
+
         {isAdmin && (
           <button onClick={() => handleDelete(e.id)} className="w-full h-11 border border-destructive/30 rounded-xl text-destructive font-medium flex items-center justify-center gap-2 active:scale-[0.97]">
             <Trash2 size={16} /> Excluir
@@ -232,26 +293,132 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
         <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-muted-foreground active:scale-95">
           <ArrowLeft size={16} /> Voltar
         </button>
+
+        {/* Dados Pessoais */}
         <div className="section-card">
-          <h2 className="section-title">👤 Dados do Eleitor</h2>
-          <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Nome <span className="text-primary">*</span></label><input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="Nome completo" className={inputCls} /></div>
+          <h2 className="section-title">👤 Dados Pessoais</h2>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">CPF {cpfStatus === 'validando' && <Loader2 size={12} className="animate-spin" />}{cpfStatus === 'confirmado' && <CheckCircle2 size={12} className="text-emerald-500" />}</label>
+            <label className="text-xs font-medium text-muted-foreground">Nome completo <span className="text-primary">*</span></label>
+            <input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="Nome do eleitor" className={inputCls} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+              CPF
+              {cpfStatus === 'validando' && <Loader2 size={12} className="animate-spin text-muted-foreground" />}
+              {cpfStatus === 'confirmado' && <CheckCircle2 size={12} className="text-emerald-500" />}
+            </label>
             <input type="text" inputMode="numeric" value={formatCPF(form.cpf)} onChange={e => handleCPFChange(e.target.value)} placeholder="000.000.000-00" className={`${inputCls} ${cpfBorderCls}`} maxLength={14} />
+            {cpfStatus === 'confirmado' && cpfNomePessoa && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✅ Pessoa encontrada: {cpfNomePessoa}</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Telefone</label><input type="tel" value={form.telefone} onChange={e => update('telefone', e.target.value)} className={inputCls} /></div>
-            <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">WhatsApp</label><input type="tel" value={form.whatsapp} onChange={e => update('whatsapp', e.target.value)} className={inputCls} /></div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Telefone</label>
+              <input type="tel" value={form.telefone} onChange={e => update('telefone', e.target.value)} placeholder="(00) 0000-0000" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">WhatsApp</label>
+              <input type="tel" value={form.whatsapp} onChange={e => update('whatsapp', e.target.value)} placeholder="(00) 00000-0000" className={inputCls} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">E-mail</label>
+            <input type="email" value={form.email} onChange={e => update('email', e.target.value)} placeholder="email@exemplo.com" className={inputCls} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Instagram</label>
+              <input type="text" value={form.instagram} onChange={e => update('instagram', e.target.value)} placeholder="@usuario" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Facebook</label>
+              <input type="text" value={form.facebook} onChange={e => update('facebook', e.target.value)} placeholder="Nome ou link" className={inputCls} />
+            </div>
           </div>
         </div>
+
+        {/* Dados Eleitorais */}
         <div className="section-card">
-          <h2 className="section-title">🔗 Vínculo na Cadeia</h2>
-          <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Liderança vinculada</label><select value={form.lideranca_id} onChange={e => update('lideranca_id', e.target.value)} className={selectCls}><option value="">Nenhuma</option>{liderancas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}</select></div>
-          <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Fiscal vinculado</label><select value={form.fiscal_id} onChange={e => update('fiscal_id', e.target.value)} className={selectCls}><option value="">Nenhum</option>{fiscais.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
-          <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Compromisso de voto</label><select value={form.compromisso_voto} onChange={e => update('compromisso_voto', e.target.value)} className={selectCls}>{compromissoOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
-          <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Observações</label><textarea value={form.observacoes} onChange={e => update('observacoes', e.target.value)} rows={3} className="w-full px-3 py-2 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 resize-none" /></div>
+          <h2 className="section-title">🗳️ Dados Eleitorais</h2>
+          <button
+            type="button"
+            onClick={() => window.open('https://www.tse.jus.br/servicos-eleitorais/autoatendimento-eleitoral#/atendimento-eleitor', '_blank')}
+            className="w-full flex items-center justify-center gap-2 h-10 px-4 border border-border rounded-xl text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 active:scale-[0.97] transition-all"
+          >
+            <ExternalLink size={16} />
+            Consultar dados no TSE
+          </button>
+          <p className="text-[11px] text-muted-foreground -mt-2">Abra o site do TSE, consulte os dados eleitorais e preencha abaixo.</p>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Título de eleitor</label>
+            <input type="text" value={form.titulo_eleitor} onChange={e => update('titulo_eleitor', e.target.value)} placeholder="Número do título" className={inputCls} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Zona</label>
+              <input type="text" value={form.zona_eleitoral} onChange={e => update('zona_eleitoral', e.target.value)} placeholder="045" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Seção</label>
+              <input type="text" value={form.secao_eleitoral} onChange={e => update('secao_eleitoral', e.target.value)} placeholder="0123" className={inputCls} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2 space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Município</label>
+              <input type="text" value={form.municipio_eleitoral} onChange={e => update('municipio_eleitoral', e.target.value)} placeholder="Cidade" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">UF</label>
+              <input type="text" value={form.uf_eleitoral} onChange={e => update('uf_eleitoral', e.target.value)} placeholder="GO" className={inputCls} maxLength={2} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Colégio eleitoral</label>
+            <input type="text" value={form.colegio_eleitoral} onChange={e => update('colegio_eleitoral', e.target.value)} placeholder="Nome da escola / local" className={inputCls} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Situação do título</label>
+            <select value={form.situacao_titulo} onChange={e => update('situacao_titulo', e.target.value)} className={selectCls}>
+              <option value="">Selecione...</option>
+              {situacoesTitulo.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
         </div>
-        <button onClick={handleSave} disabled={saving} className="w-full h-14 gradient-primary text-white text-base font-semibold rounded-2xl shadow-lg shadow-pink-500/25 active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+
+        {/* Vínculo (opcional) */}
+        <div className="section-card">
+          <h2 className="section-title">🔗 Vínculo (opcional)</h2>
+          <p className="text-[10px] text-muted-foreground -mt-2 mb-2">Pode cadastrar sem vincular a ninguém.</p>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Liderança vinculada</label>
+            <select value={form.lideranca_id} onChange={e => update('lideranca_id', e.target.value)} className={selectCls}>
+              <option value="">Nenhuma</option>
+              {liderancas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Fiscal vinculado</label>
+            <select value={form.fiscal_id} onChange={e => update('fiscal_id', e.target.value)} className={selectCls}>
+              <option value="">Nenhum</option>
+              {fiscais.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Compromisso de voto</label>
+            <select value={form.compromisso_voto} onChange={e => update('compromisso_voto', e.target.value)} className={selectCls}>
+              {compromissoOptions.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Observações</label>
+            <textarea value={form.observacoes} onChange={e => update('observacoes', e.target.value)} rows={3} className={textareaCls} />
+          </div>
+        </div>
+
+        <button onClick={handleSave} disabled={saving}
+          className="w-full h-14 gradient-primary text-white text-base font-semibold rounded-2xl shadow-lg shadow-pink-500/25 active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
           {saving ? <><Loader2 size={20} className="animate-spin" /> Salvando...</> : '✅ Salvar Eleitor'}
         </button>
       </div>
