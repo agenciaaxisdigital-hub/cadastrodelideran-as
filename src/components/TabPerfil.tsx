@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth, TipoUsuario } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye, ChevronDown } from 'lucide-react';
+import { LogOut, Shield, User, UserPlus, Loader2, Crown, Users, Eye, Copy, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const tipoLabels: Record<TipoUsuario, string> = {
@@ -26,6 +26,64 @@ interface SuplenteOption {
   regiao_atuacao: string | null;
 }
 
+interface CredenciaisInfo {
+  nome: string;
+  email: string;
+  senha?: string;
+}
+
+function generateEmail(nome: string) {
+  const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
+  return `${slug}@rede.sarelli.com`;
+}
+
+function CredenciaisModal({ info, onClose }: { info: CredenciaisInfo; onClose: () => void }) {
+  const copiar = (texto: string, label: string) => {
+    navigator.clipboard.writeText(texto);
+    toast({ title: `${label} copiado!` });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-foreground">🔑 Credenciais</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Nome</p>
+            <p className="text-sm font-semibold text-foreground">{info.nome}</p>
+          </div>
+
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Usuário (e-mail de login)</p>
+            <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
+              <p className="text-sm font-mono text-foreground flex-1 break-all">{info.email}</p>
+              <button onClick={() => copiar(info.email, 'Usuário')} className="text-primary shrink-0"><Copy size={14} /></button>
+            </div>
+          </div>
+
+          {info.senha && (
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Senha</p>
+              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2">
+                <p className="text-sm font-mono text-foreground flex-1">{info.senha}</p>
+                <button onClick={() => copiar(info.senha!, 'Senha')} className="text-primary shrink-0"><Copy size={14} /></button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-[10px] text-muted-foreground text-center">
+          {info.senha ? 'Anote essas credenciais! A senha não poderá ser visualizada novamente.' : 'A senha foi definida na criação do usuário.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function TabPerfil() {
   const { usuario, isAdmin, tipoUsuario, signOut } = useAuth();
   const [usuarios, setUsuarios] = useState<{ id: string; nome: string; tipo: string; criado_em: string; suplente_id: string | null }[]>([]);
@@ -35,6 +93,7 @@ export default function TabPerfil() {
   const [criando, setCriando] = useState(false);
   const [suplentes, setSuplentes] = useState<SuplenteOption[]>([]);
   const [selectedSuplenteId, setSelectedSuplenteId] = useState('');
+  const [credenciais, setCredenciais] = useState<CredenciaisInfo | null>(null);
 
   const fetchUsuarios = async () => {
     const { data } = await supabase.from('hierarquia_usuarios').select('id, nome, tipo, criado_em, suplente_id').eq('ativo', true).order('criado_em', { ascending: false });
@@ -58,10 +117,8 @@ export default function TabPerfil() {
     }
   }, [isAdmin]);
 
-  // Filter suplentes that don't already have a user
   const suplentesJaVinculados = new Set(usuarios.filter(u => u.suplente_id).map(u => u.suplente_id));
   const suplentesDisponiveis = suplentes.filter(s => !suplentesJaVinculados.has(s.id));
-
   const selectedSuplente = suplentes.find(s => s.id === selectedSuplenteId);
 
   const handleCriar = async () => {
@@ -80,7 +137,10 @@ export default function TabPerfil() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: `✅ Usuário "${selectedSuplente.nome}" criado!` });
+
+      const email = generateEmail(selectedSuplente.nome);
+      setCredenciais({ nome: selectedSuplente.nome, email, senha: novoSenha });
+
       setNovoSenha('');
       setSelectedSuplenteId('');
       setShowForm(false);
@@ -90,11 +150,15 @@ export default function TabPerfil() {
     } finally { setCriando(false); }
   };
 
+  const handleClickUsuario = (u: { nome: string }) => {
+    const email = generateEmail(u.nome);
+    setCredenciais({ nome: u.nome, email });
+  };
+
   const inputCls = "w-full h-10 px-3 bg-card border border-border rounded-xl text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30";
   const selectCls = inputCls;
   const IconComponent = tipoUsuario ? tipoIcons[tipoUsuario] : User;
 
-  // Find suplente name for a user
   const getSuplenteNome = (suplente_id: string | null) => {
     if (!suplente_id) return null;
     return suplentes.find(s => s.id === suplente_id)?.nome || null;
@@ -102,6 +166,8 @@ export default function TabPerfil() {
 
   return (
     <div className="space-y-4 pb-24">
+      {credenciais && <CredenciaisModal info={credenciais} onClose={() => setCredenciais(null)} />}
+
       <div className="section-card flex flex-col items-center text-center">
         <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center">
           <IconComponent size={28} className="text-white" />
@@ -112,7 +178,6 @@ export default function TabPerfil() {
         </span>
       </div>
 
-      {/* Gerenciamento de Usuários (admin only) */}
       {isAdmin && (
         <div className="section-card">
           <div className="flex items-center justify-between">
@@ -173,7 +238,11 @@ export default function TabPerfil() {
 
           <div className="space-y-1.5">
             {usuarios.map(u => (
-              <div key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card">
+              <div
+                key={u.id}
+                onClick={() => handleClickUsuario(u)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card cursor-pointer hover:bg-muted/30 active:scale-[0.98] transition-all"
+              >
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-primary">{u.nome.charAt(0).toUpperCase()}</span>
                 </div>
