@@ -27,6 +27,8 @@ interface EleitorRow {
     nome: string; cpf: string | null; telefone: string | null; whatsapp: string | null;
     zona_eleitoral: string | null; secao_eleitoral: string | null;
   };
+  liderancas: { id: string; pessoas: { nome: string } | null } | null;
+  fiscais: { id: string; pessoas: { nome: string } | null } | null;
 }
 
 interface Props {
