@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Users, TrendingUp, Shield, Target, Filter,
-  ChevronDown, ChevronUp, UserCheck, Loader2
+  ChevronDown, ChevronUp, UserCheck, Loader2, Download, List, ArrowRight
 } from 'lucide-react';
+import { exportAllCadastros } from '@/lib/exportXlsx';
 import {
   ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar
 } from 'recharts';
@@ -53,6 +55,39 @@ export default function AdminDashboard() {
   const [periodo, setPeriodo] = useState<Periodo>('total');
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('todos');
   const [expandedSuplente, setExpandedSuplente] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [showRecords, setShowRecords] = useState<'lideranca' | 'fiscal' | 'eleitor' | null>(null);
+  const [recordsData, setRecordsData] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  const handleExport = async (tipo?: 'lideranca' | 'fiscal' | 'eleitor') => {
+    setExporting(true);
+    try {
+      const count = await exportAllCadastros(tipo);
+      toast({ title: `✅ ${count} registros exportados!` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao exportar', description: err.message, variant: 'destructive' });
+    } finally { setExporting(false); }
+  };
+
+  const handleShowRecords = async (tipo: 'lideranca' | 'fiscal' | 'eleitor') => {
+    if (showRecords === tipo) { setShowRecords(null); return; }
+    setShowRecords(tipo);
+    setLoadingRecords(true);
+    try {
+      if (tipo === 'lideranca') {
+        const { data } = await supabase.from('liderancas').select('id, status, criado_em, cadastrado_por, pessoas(nome, cpf, telefone), hierarquia_usuarios!liderancas_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      } else if (tipo === 'fiscal') {
+        const { data } = await supabase.from('fiscais').select('id, status, criado_em, cadastrado_por, zona_fiscal, secao_fiscal, pessoas(nome, cpf, telefone), hierarquia_usuarios!fiscais_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      } else {
+        const { data } = await supabase.from('possiveis_eleitores').select('id, compromisso_voto, criado_em, cadastrado_por, pessoas(nome, cpf, telefone), hierarquia_usuarios!possiveis_eleitores_cadastrado_por_fkey(nome)').order('criado_em', { ascending: false });
+        setRecordsData(data || []);
+      }
+    } catch { setRecordsData([]); }
+    finally { setLoadingRecords(false); }
+  };
 
   useEffect(() => {
     if (!isAdmin) { navigate('/'); return; }
@@ -297,18 +332,80 @@ export default function AdminDashboard() {
 
         {/* ── Resumo por tipo ── */}
         <div className="grid grid-cols-3 gap-3">
-          {[
-            { icon: Users, label: 'Lideranças', value: totais.liderancas, color: TIPO_COLORS.lideranca },
-            { icon: Shield, label: 'Fiscais', value: totais.fiscais, color: TIPO_COLORS.fiscal },
-            { icon: Target, label: 'Eleitores', value: totais.eleitores, color: TIPO_COLORS.eleitor },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} className="section-card text-center">
+          {([
+            { icon: Users, label: 'Lideranças', value: totais.liderancas, color: TIPO_COLORS.lideranca, tipo: 'lideranca' as const },
+            { icon: Shield, label: 'Fiscais', value: totais.fiscais, color: TIPO_COLORS.fiscal, tipo: 'fiscal' as const },
+            { icon: Target, label: 'Eleitores', value: totais.eleitores, color: TIPO_COLORS.eleitor, tipo: 'eleitor' as const },
+          ]).map(({ icon: Icon, label, value, color, tipo: t }) => (
+            <button key={label} onClick={() => handleShowRecords(t)} className="section-card text-center active:scale-[0.97] transition-all">
               <Icon size={18} className="mx-auto mb-1" style={{ color }} />
               <p className="text-xl font-bold text-foreground">{value}</p>
               <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</p>
-            </div>
+              <p className="text-[8px] text-primary mt-1">Ver registros →</p>
+            </button>
           ))}
         </div>
+
+        {/* ── Exportar ── */}
+        <div className="flex gap-2">
+          <button onClick={() => handleExport()} disabled={exporting}
+            className="flex-1 h-10 flex items-center justify-center gap-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground active:scale-[0.97] transition-all disabled:opacity-50">
+            {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            Exportar Todos (CSV)
+          </button>
+          {tipoFiltro !== 'todos' && (
+            <button onClick={() => handleExport(tipoFiltro as any)} disabled={exporting}
+              className="h-10 px-4 flex items-center justify-center gap-2 bg-primary/10 border border-primary/20 rounded-xl text-sm font-medium text-primary active:scale-[0.97] transition-all disabled:opacity-50">
+              <Download size={14} /> Só {tipoFiltroLabels[tipoFiltro]}
+            </button>
+          )}
+        </div>
+
+        {/* ── Lista de registros ── */}
+        {showRecords && (
+          <div className="section-card">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="section-title !mb-0">
+                {showRecords === 'lideranca' ? '👥 Lideranças' : showRecords === 'fiscal' ? '🛡️ Fiscais' : '🎯 Eleitores'}
+              </h2>
+              <button onClick={() => setShowRecords(null)} className="text-xs text-muted-foreground">Fechar ✕</button>
+            </div>
+            {loadingRecords ? (
+              <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-primary" /></div>
+            ) : recordsData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhum registro encontrado</p>
+            ) : (
+              <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
+                {recordsData.map((r: any) => {
+                  const p = r.pessoas || {};
+                  const agente = r.hierarquia_usuarios?.nome || '—';
+                  return (
+                    <div key={r.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 border border-border/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{p.nome || '—'}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span>{p.cpf || 'Sem CPF'}</span>
+                          <span>·</span>
+                          <span>{p.telefone || 'Sem tel.'}</span>
+                        </div>
+                        <p className="text-[9px] text-primary/70 mt-0.5">
+                          Por: {agente} · {new Date(r.criado_em).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                        {r.status || r.compromisso_voto || '—'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button onClick={() => handleExport(showRecords)} disabled={exporting}
+              className="w-full mt-3 h-9 flex items-center justify-center gap-2 bg-primary/10 border border-primary/20 rounded-xl text-xs font-medium text-primary active:scale-[0.97] transition-all disabled:opacity-50">
+              <Download size={12} /> Exportar {showRecords === 'lideranca' ? 'Lideranças' : showRecords === 'fiscal' ? 'Fiscais' : 'Eleitores'} (CSV)
+            </button>
+          </div>
+        )}
 
         {/* ── Timeline ── */}
         {timelineData.length > 0 && (

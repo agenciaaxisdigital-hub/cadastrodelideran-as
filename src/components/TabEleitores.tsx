@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, CheckCircle2, Search, ChevronRight, ArrowLeft, Phone, MessageCircle, Trash2, ExternalLink } from 'lucide-react';
+import { Loader2, CheckCircle2, Search, ChevronRight, ArrowLeft, Phone, MessageCircle, Trash2, ExternalLink, Download } from 'lucide-react';
+import { exportAllCadastros } from '@/lib/exportXlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCPF, cleanCPF, validateCPF } from '@/lib/cpf';
@@ -448,6 +449,12 @@ export default function TabEleitores({ refreshKey, onSaved }: Props) {
         ))}
       </div>
       <p className="text-xs text-muted-foreground">{filtered.length} registro{filtered.length !== 1 ? 's' : ''}</p>
+      {isAdmin && (
+        <button onClick={() => exportAllCadastros('eleitor')}
+          className="w-full h-9 flex items-center justify-center gap-2 bg-card border border-border rounded-xl text-xs font-medium text-foreground active:scale-[0.97] transition-all">
+          <Download size={14} /> Exportar Eleitores (CSV)
+        </button>
+      )}
       {loading ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="section-card animate-pulse"><div className="h-4 bg-muted rounded w-2/3" /></div>)}</div>
       ) : filtered.length === 0 ? (

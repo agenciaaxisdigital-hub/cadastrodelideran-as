@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, ChevronRight, Phone, MessageCircle, Trash2, ArrowLeft, XCircle } from 'lucide-react';
+import { Search, ChevronRight, Phone, MessageCircle, Trash2, ArrowLeft, XCircle, Download } from 'lucide-react';
+import { exportAllCadastros } from '@/lib/exportXlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { maskCPF } from '@/lib/cpf';
@@ -239,6 +240,13 @@ export default function TabLiderancas({ refreshKey }: Props) {
       )}
 
       <p className="text-xs text-muted-foreground">{filtered.length} liderança{filtered.length !== 1 ? 's' : ''}</p>
+
+      {isAdmin && (
+        <button onClick={() => exportAllCadastros('lideranca')}
+          className="w-full h-9 flex items-center justify-center gap-2 bg-card border border-border rounded-xl text-xs font-medium text-foreground active:scale-[0.97] transition-all">
+          <Download size={14} /> Exportar Lideranças (CSV)
+        </button>
+      )}
 
       {loading ? (
         <div className="space-y-3">
