@@ -25,7 +25,6 @@ export default function Home() {
   };
 
   const getTitle = () => {
-    if (activeTab === 'painel') return 'Painel de Produção';
     if (activeTab === 'liderancas') {
       if (tipoUsuario === 'fiscal') return 'Cadastrar Eleitor';
       if (tipoUsuario === 'lideranca') return 'Cadastrar Fiscal';

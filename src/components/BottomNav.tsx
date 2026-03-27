@@ -16,9 +16,6 @@ export default function BottomNav({ active, onChange }: Props) {
   // Build tabs dynamically based on user type
   const tabs: { id: TabId; icon: typeof PlusCircle; label: string }[] = [];
 
-  // Painel is first for everyone
-  tabs.push({ id: 'painel', icon: LayoutDashboard, label: 'Painel' });
-
   // Everyone can register lideranças/fiscais/eleitores
   tabs.push({ id: 'liderancas', icon: PlusCircle, label: 'Lideranças' });
 
