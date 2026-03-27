@@ -293,32 +293,45 @@ export default function TabPerfil() {
 
           {showForm && (
             <div className="bg-muted/50 border border-border rounded-xl p-3 space-y-2">
-              <p className="text-xs font-semibold text-foreground">Criar acesso para suplente</p>
-              <p className="text-[10px] text-muted-foreground">Selecione o suplente já cadastrado e defina uma senha para ele acessar o app.</p>
+              <div className="flex gap-2 mb-2">
+                <button onClick={() => setModoLivre(false)} className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${!modoLivre ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground'}`}>
+                  Da Rede (Suplente)
+                </button>
+                <button onClick={() => setModoLivre(true)} className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${modoLivre ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground'}`}>
+                  Livre (Nome + Senha)
+                </button>
+              </div>
 
-              <select value={selectedSuplenteId} onChange={e => setSelectedSuplenteId(e.target.value)} className={selectCls}>
-                <option value="">Selecione o suplente...</option>
-                {suplentesDisponiveis.map(s => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}{s.regiao_atuacao ? ` — ${s.regiao_atuacao}` : ''}
-                  </option>
-                ))}
-              </select>
-
-              {selectedSuplente && (
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-2">
-                  <p className="text-xs font-semibold text-primary">{selectedSuplente.nome}</p>
-                  {selectedSuplente.regiao_atuacao && (
-                    <p className="text-[10px] text-muted-foreground">{selectedSuplente.regiao_atuacao}</p>
+              {modoLivre ? (
+                <>
+                  <p className="text-[10px] text-muted-foreground">Crie um usuário com nome e senha, sem vínculo a suplente.</p>
+                  <input type="text" value={nomeLivre} onChange={e => setNomeLivre(e.target.value)} placeholder="Nome do usuário" className={inputCls} />
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] text-muted-foreground">Selecione o suplente já cadastrado e defina uma senha.</p>
+                  <select value={selectedSuplenteId} onChange={e => setSelectedSuplenteId(e.target.value)} className={selectCls}>
+                    <option value="">Selecione o suplente...</option>
+                    {suplentesDisponiveis.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome}{s.regiao_atuacao ? ` — ${s.regiao_atuacao}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedSuplente && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-2">
+                      <p className="text-xs font-semibold text-primary">{selectedSuplente.nome}</p>
+                      {selectedSuplente.regiao_atuacao && <p className="text-[10px] text-muted-foreground">{selectedSuplente.regiao_atuacao}</p>}
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               <input type="text" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} placeholder="Senha de acesso" className={inputCls} />
 
               <button
                 onClick={handleCriar}
-                disabled={criando || !selectedSuplenteId || !novoSenha.trim()}
+                disabled={criando || (!modoLivre && !selectedSuplenteId) || (modoLivre && !nomeLivre.trim()) || !novoSenha.trim()}
                 className="w-full h-10 rounded-xl text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-50 active:scale-[0.97] transition-all flex items-center justify-center gap-2"
               >
                 {criando ? <><Loader2 size={14} className="animate-spin" /> Criando...</> : 'Criar Acesso'}
