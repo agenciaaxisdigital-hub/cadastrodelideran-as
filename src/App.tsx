@@ -37,9 +37,19 @@ function AppRoutes() {
   );
 }
 
+import VersionMonitor from "./components/VersionMonitor";
+import { useOfflineSync } from "./hooks/useOfflineSync";
+
+function GlobalOfflineSync() {
+  useOfflineSync();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <GlobalOfflineSync />
+      <VersionMonitor />
       <Toaster />
       <BrowserRouter>
         <AuthProvider>

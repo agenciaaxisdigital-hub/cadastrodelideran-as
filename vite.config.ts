@@ -4,6 +4,8 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+process.env.VITE_APP_VERSION = Date.now().toString(36).toUpperCase();
+
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -17,6 +19,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["icon-192.png", "icon-512.png"],
       manifest: {
         name: "Rede Política – Dra. Fernanda Sarelli",
@@ -37,7 +40,7 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}"],
-        navigateFallbackDenylist: [/^\\/~oauth/],
+        navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

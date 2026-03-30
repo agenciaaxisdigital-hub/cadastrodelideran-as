@@ -29,9 +29,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function nomeToEmail(nome: string): string {
+function nomeToEmail(nome: string, domain: string = '@sistema.local'): string {
   const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-  return `${slug}@rede.sarelli.com`;
+  return `${slug}${domain}`;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -74,8 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (nome: string, password: string) => {
-    const email = nomeToEmail(nome);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const email = nomeToEmail(nome, '@sistema.local');
+    let { error } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Fallback legacy
+    if (error) {
+       const legacyEmail = nomeToEmail(nome, '@rede.sarelli.com');
+       const fallbackAttempt = await supabase.auth.signInWithPassword({ email: legacyEmail, password });
+       error = fallbackAttempt.error;
+    }
+    
     return { error: error?.message ?? null };
   };
 

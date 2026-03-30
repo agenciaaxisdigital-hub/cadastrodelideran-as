@@ -1,0 +1,16 @@
+﻿{
+  "packageId": "br.com.sarelli.lideranças",
+  "host": "liderancas.sarelli.com.br",
+  "name": "Lideranças Sarelli",
+  "launcherName": "Lideranças",
+  "themeColor": "#ec4899",
+  "navigationColor": "#070510",
+  "backgroundColor": "#070510",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://liderancas.sarelli.com.br/icon-512.png",
+  "maskableIconUrl": "https://liderancas.sarelli.com.br/icon-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "fallbackType": "customtabs"
+}

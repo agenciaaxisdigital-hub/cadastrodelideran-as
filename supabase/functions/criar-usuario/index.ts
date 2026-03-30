@@ -27,13 +27,13 @@ Deno.serve(async (req) => {
 
     // Create email from nome
     const slug = nome.toLowerCase().trim().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-    const email = `${slug}@rede.sarelli.com`;
+    const email = `${slug}@sistema.local`;
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: senha,
-      email_confirm: true,
+      email_confirm: false,
     });
 
     if (authError) {
